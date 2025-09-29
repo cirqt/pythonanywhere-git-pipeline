@@ -1,0 +1,61 @@
+name: Deploy to PythonAnywhere
+
+on:
+  # Trigger on push to main branch
+  push:
+    branches: [ main ]
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      project_path:
+        description: 'Project path on PythonAnywhere'
+        required: true
+        default: '/home/username/myproject'
+      branch:
+        description: 'Git branch to deploy'
+        required: true
+        default: 'main'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Deploy to PythonAnywhere
+      env:
+        PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
+        PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
+        PAW_HOST: ${{ secrets.PAW_HOST }}
+      run: |
+        # Use manual input or default from secrets
+        PROJECT_PATH="${{ github.event.inputs.project_path || secrets.PAW_PROJECT_PATH }}"
+        BRANCH="${{ github.event.inputs.branch || 'main' }}"
+        
+        echo "🚀 Deploying to PythonAnywhere..."
+        echo "   📁 Project Path: $PROJECT_PATH"
+        echo "   🌿 Branch: $BRANCH"
+        
+        python github_deploy.py --project-path "$PROJECT_PATH" --branch "$BRANCH"
+    
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Deployment to PythonAnywhere completed successfully!"
+        else
+          echo "❌ Deployment to PythonAnywhere failed!"
+        fi
