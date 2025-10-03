@@ -35,17 +35,28 @@ class PythonAnywhereGitPipeline:
     
     def __init__(self, credentials: PAWCredentials):
         self.credentials = credentials
-        # Fix API URL format - PythonAnywhere uses www.pythonanywhere.com for API
-        if 'pythonanywhere.com' in credentials.host:
+        
+        # Fix API URL format - PythonAnywhere API documentation specifies exact hosts
+        host = credentials.host.replace('https://', '').replace('http://', '').rstrip('/')
+        
+        if 'eu.pythonanywhere.com' in host:
+            self.api_base = f"https://eu.pythonanywhere.com/api/v0/user/{credentials.username}"
+            self.logger.info("Using EU PythonAnywhere API endpoint")
+        elif 'pythonanywhere.com' in host:
             self.api_base = f"https://www.pythonanywhere.com/api/v0/user/{credentials.username}"
+            self.logger.info("Using US PythonAnywhere API endpoint")
         else:
-            self.api_base = f"{credentials.host}/api/v0/user/{credentials.username}"
+            # Fallback - assume US
+            self.api_base = f"https://www.pythonanywhere.com/api/v0/user/{credentials.username}"
+            self.logger.warning(f"Unknown host format '{host}', defaulting to US endpoint")
         
         self.session = requests.Session()
         self.session.headers.update({
             'Authorization': f'Token {credentials.token}',
             'Content-Type': 'application/json'
         })
+        
+        self.logger.info(f"API Base URL: {self.api_base}")
         
         # Setup logging
         logging.basicConfig(
