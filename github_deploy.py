@@ -34,7 +34,15 @@ def load_credentials_from_env() -> PAWCredentials:
         missing_vars.append('PAW_HOST')
     
     if missing_vars:
+        print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
+        print("💡 Please set these GitHub Secrets in your repository:")
+        print("   - PAW_USERNAME: Your PythonAnywhere username")
+        print("   - PAW_TOKEN: Your PythonAnywhere API token")
+        print("   - PAW_HOST: Your domain (e.g., username.pythonanywhere.com)")
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    print(f"✅ Loaded credentials for user: {username}")
+    print(f"✅ Using domain: {host}")
     
     return PAWCredentials(username=username, token=token, host=host)
 
@@ -54,6 +62,13 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         # Load credentials from environment (GitHub Secrets)
         credentials = load_credentials_from_env()
         
+        # Get GitHub token if available
+        github_token = os.getenv('GITHUB_TOKEN')
+        if github_token:
+            print("✅ GitHub token found for private repo access")
+        else:
+            print("⚠️  No GitHub token found - assuming public repo")
+        
         # Initialize pipeline
         pipeline = PythonAnywhereGitPipeline(credentials)
         
@@ -67,7 +82,7 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         
         # Execute deployment
         print(f"🚀 Deploying to {project_path} (branch: {branch})...")
-        result = pipeline.execute_git_pull(project_path, branch)
+        result = pipeline.execute_git_pull(project_path, branch, github_token)
         
         if result['success']:
             print("✅ Deployment completed successfully!")

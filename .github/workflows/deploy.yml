@@ -22,6 +22,7 @@ on:
 # - PAW_TOKEN: Your PythonAnywhere API token  
 # - PAW_HOST: Your PythonAnywhere domain (e.g., username.pythonanywhere.com)
 # - PAW_PROJECT_PATH: Default project path (e.g., /home/username/myproject)
+# - GITHUB_TOKEN: GitHub personal access token (for private repos)
 
 jobs:
   deploy:
@@ -34,7 +35,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.9'
+        python-version: '3.11'  # Updated to a supported version
     
     - name: Install dependencies
       run: |
@@ -51,16 +52,19 @@ jobs:
         
         if [ -z "$PAW_USERNAME" ]; then
           echo "❌ PAW_USERNAME secret is not set"
+          echo "💡 Go to Settings → Secrets → Actions and add PAW_USERNAME"
           exit 1
         fi
         
         if [ -z "$PAW_TOKEN" ]; then
           echo "❌ PAW_TOKEN secret is not set"
+          echo "💡 Go to Settings → Secrets → Actions and add PAW_TOKEN"
           exit 1
         fi
         
         if [ -z "$PAW_HOST" ]; then
           echo "❌ PAW_HOST secret is not set"
+          echo "💡 Go to Settings → Secrets → Actions and add PAW_HOST"
           exit 1
         fi
         
@@ -75,6 +79,7 @@ jobs:
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         # Determine project path
         if [ -n "${{ github.event.inputs.project_path }}" ]; then
@@ -94,8 +99,8 @@ jobs:
         echo "   👤 Username: $PAW_USERNAME"
         echo "   🌐 Host: $PAW_HOST"
         
-        # Run deployment with enhanced error handling
-        python enhanced_error_handling.py --project-path "$PROJECT_PATH" --branch "$BRANCH" --use-env
+        # Run deployment using the main script since enhanced_error_handling.py might not exist yet
+        python github_deploy.py --project-path "$PROJECT_PATH" --branch "$BRANCH"
     
     - name: Create deployment marker
       if: success()
@@ -105,7 +110,8 @@ jobs:
         PAW_HOST: ${{ secrets.PAW_HOST }}
       run: |
         echo "📝 Creating deployment marker..."
-        python test_deployment.py create
+        echo "Deployment completed at $(date)" > deployment_marker.txt
+        echo "Git commit: ${{ github.sha }}" >> deployment_marker.txt
     
     - name: Notify deployment status
       if: always()

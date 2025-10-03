@@ -58,25 +58,32 @@ class PythonAnywhereGitPipeline:
             self.logger.error(f"Connection test failed: {e}")
             return False
     
-    def execute_git_pull(self, project_path: str, branch: str = "main") -> Dict[str, Any]:
+    def execute_git_pull(self, project_path: str, branch: str = "main", github_token: str = None) -> Dict[str, Any]:
         """
         Execute git pull command in PythonAnywhere console
         
         Args:
             project_path: Path to the project directory on PythonAnywhere
             branch: Git branch to pull (default: main)
+            github_token: GitHub personal access token for private repos
             
         Returns:
             Dictionary containing execution results
         """
         commands = [
-            f"cd {project_path}",
-            f"git pull origin {branch}"
+            f"cd {project_path}"
         ]
+        
+        # Add GitHub token authentication if provided
+        if github_token:
+            commands.append(f"git config credential.helper store")
+            commands.append(f"echo 'https://{github_token}@github.com' > ~/.git-credentials")
+        
+        commands.append(f"git pull origin {branch}")
         
         return self._execute_console_commands(commands)
     
-    def execute_git_clone(self, repo_url: str, target_path: str, branch: str = "main") -> Dict[str, Any]:
+    def execute_git_clone(self, repo_url: str, target_path: str, branch: str = "main", github_token: str = None) -> Dict[str, Any]:
         """
         Clone a git repository to PythonAnywhere
         
@@ -84,10 +91,15 @@ class PythonAnywhereGitPipeline:
             repo_url: Git repository URL
             target_path: Target path on PythonAnywhere
             branch: Git branch to clone (default: main)
+            github_token: GitHub personal access token for private repos
             
         Returns:
             Dictionary containing execution results
         """
+        # Modify repo URL to include token if provided
+        if github_token and 'github.com' in repo_url:
+            repo_url = repo_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+        
         commands = [
             f"git clone -b {branch} {repo_url} {target_path}"
         ]

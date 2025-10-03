@@ -1,58 +1,49 @@
 # PythonAnywhere Git Pipeline
 
-A Python package for executing Git operations on PythonAnywhere hosting service via their console API using credentials provided through YAML configuration files.
+Automates git operations on PythonAnywhere through their console API. Uses YAML config or GitHub Secrets.
 
 ## Features
 
-- 🚀 Execute `git pull` commands on PythonAnywhere remotely
-- � Execute `git push` commands with automatic commit
-- �📁 Clone repositories to PythonAnywhere
-- 🔧 YAML-based configuration management
-- 🛡️ Secure API token authentication
-- 📝 Comprehensive logging
-- 🔌 Easy integration with other projects
+- Execute git pull/push/clone on PythonAnywhere remotely
+- YAML config or GitHub Secrets for credentials  
+- API token authentication
+- Basic logging
+- Works with other projects
 
 ## Installation
 
-### Install from Source
-
+Clone and install:
 ```bash
 git clone https://github.com/yourusername/PAWgithubPipeline.git
 cd PAWgithubPipeline
 pip install -r requirements.txt
 ```
 
-### Install as Package
-
+Or install as package:
 ```bash
 pip install -e .
 ```
 
 ## Configuration
 
-### 🔒 **Method 1: GitHub Secrets (Recommended for Production)**
+### Method 1: GitHub Secrets (for CI/CD)
 
-For secure deployments, use GitHub Secrets instead of YAML files:
+Add these secrets to your repo:
+- `PAW_USERNAME` - Your PythonAnywhere username
+- `PAW_TOKEN` - Your API token  
+- `PAW_HOST` - Your domain (username.pythonanywhere.com)
+- `PAW_PROJECT_PATH` - Project path (/home/username/project)
 
-1. **Add secrets to your GitHub repository:**
-   - Go to Settings → Secrets and variables → Actions
-   - Add these secrets:
-     - `PAW_USERNAME`: Your PythonAnywhere username
-     - `PAW_TOKEN`: Your PythonAnywhere API token
-     - `PAW_HOST`: Your domain (e.g., `yourusername.pythonanywhere.com`)
-     - `PAW_PROJECT_PATH`: Project path (e.g., `/home/yourusername/myproject`)
+GitHub Actions will use these automatically.
 
-2. **The GitHub Actions workflow will automatically use these secrets**
+### Method 2: YAML Config (for local use)
 
-### 📄 **Method 2: YAML Configuration (Local Development)**
-
-1. Copy the example configuration file:
+Copy example config:
 ```bash
 cp config.yaml.example config.yaml
 ```
 
-2. Edit `config.yaml` with your PythonAnywhere credentials:
-
+Edit with your credentials:
 ```yaml
 pythonanywhere:
   username: "your_username"
@@ -61,19 +52,14 @@ pythonanywhere:
 
 projects:
   my_project:
-    path: "/home/yourusername/myproject"
-    repository: "https://github.com/yourusername/myproject.git"
+    path: "/home/username/project"
+    repository: "https://github.com/user/repo.git"
     branch: "main"
 ```
 
-### Getting Your API Token
+Get API token from PythonAnywhere Account → API Token.
 
-1. Log into your PythonAnywhere account
-2. Go to Account → API Token
-3. Generate a new token if you don't have one
-4. Add the token to GitHub Secrets or your `config.yaml`
-
-> **⚠️ Security Note:** Never commit `config.yaml` with real credentials to version control. Use GitHub Secrets for production deployments.
+Don't commit real credentials to git.
 
 ## Usage
 
@@ -314,5 +300,6 @@ logging.basicConfig(level=logging.DEBUG)
 - Check PythonAnywhere's API documentation
 - Review the console output for detailed error messages
 - Ensure your PythonAnywhere account is active and has console access
-#   T e s t   d e p l o y m e n t :   1  
+#   T e s t   d e p l o y m e n t :   1 
+ 
  
