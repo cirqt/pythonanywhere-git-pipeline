@@ -65,42 +65,42 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         # Get GitHub token if available
         github_token = os.getenv('GITHUB_TOKEN')
         if github_token:
-            print("✅ GitHub token found for private repo access")
+            print("GitHub token found for private repo access")
         else:
-            print("⚠️  No GitHub token found - assuming public repo")
+            print("No GitHub token found - assuming public repo")
         
         # Initialize pipeline
         pipeline = PythonAnywhereGitPipeline(credentials)
         
         # Test connection
-        print("🔍 Testing connection to PythonAnywhere...")
+        print("Testing connection to PythonAnywhere...")
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return False
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Execute deployment
-        print(f"🚀 Deploying to {project_path} (branch: {branch})...")
+        print(f"Deploying to {project_path} (branch: {branch})...")
         result = pipeline.execute_git_pull(project_path, branch, github_token)
         
         if result['success']:
-            print("✅ Deployment completed successfully!")
+            print("Deployment completed successfully!")
             for cmd_result in result['results']:
                 if cmd_result['output'].strip():
-                    print(f"   📄 {cmd_result['output'].strip()}")
+                    print(f"   {cmd_result['output'].strip()}")
         else:
-            print("❌ Deployment failed!")
+            print("Deployment failed!")
             if 'error' in result:
-                print(f"   💥 Error: {result['error']}")
+                print(f"   Error: {result['error']}")
             for cmd_result in result['results']:
                 if cmd_result.get('error'):
-                    print(f"   💥 Command Error: {cmd_result['error']}")
+                    print(f"   Command Error: {cmd_result['error']}")
         
         return result['success']
         
     except Exception as e:
-        print(f"❌ Deployment Error: {e}")
+        print(f"Deployment Error: {e}")
         return False
 
 
