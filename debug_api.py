@@ -18,8 +18,12 @@ def test_api_endpoints():
         
         if not host.startswith('http'):
             host = f"https://{host}"
-            
-        api_base = f"{host}/api/v0/user/{username}"
+        
+        # Fix API URL format - PythonAnywhere uses www.pythonanywhere.com for API
+        if 'pythonanywhere.com' in host:
+            api_base = f"https://www.pythonanywhere.com/api/v0/user/{username}"
+        else:
+            api_base = f"{host}/api/v0/user/{username}"
         
         headers = {
             'Authorization': f'Token {token}',

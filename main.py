@@ -35,7 +35,12 @@ class PythonAnywhereGitPipeline:
     
     def __init__(self, credentials: PAWCredentials):
         self.credentials = credentials
-        self.api_base = f"{credentials.host}/api/v0/user/{credentials.username}"
+        # Fix API URL format - PythonAnywhere uses www.pythonanywhere.com for API
+        if 'pythonanywhere.com' in credentials.host:
+            self.api_base = f"https://www.pythonanywhere.com/api/v0/user/{credentials.username}"
+        else:
+            self.api_base = f"{credentials.host}/api/v0/user/{credentials.username}"
+        
         self.session = requests.Session()
         self.session.headers.update({
             'Authorization': f'Token {credentials.token}',
