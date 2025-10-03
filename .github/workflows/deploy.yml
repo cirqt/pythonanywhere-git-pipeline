@@ -9,13 +9,19 @@ on:
   workflow_dispatch:
     inputs:
       project_path:
-        description: 'Project path on PythonAnywhere'
-        required: true
-        default: '/home/username/myproject'
+        description: 'Project path on PythonAnywhere (leave empty to use default)'
+        required: false
+        default: ''
       branch:
         description: 'Git branch to deploy'
-        required: true
+        required: false
         default: 'main'
+      
+# Required GitHub Secrets:
+# - PAW_USERNAME: Your PythonAnywhere username
+# - PAW_TOKEN: Your PythonAnywhere API token  
+# - PAW_HOST: Your PythonAnywhere domain (e.g., username.pythonanywhere.com)
+# - PAW_PROJECT_PATH: Default project path (e.g., /home/username/myproject)
 
 jobs:
   deploy:
@@ -35,27 +41,83 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
-    - name: Deploy to PythonAnywhere
+    - name: Validate GitHub Secrets
       env:
         PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
       run: |
-        # Use manual input or default from secrets
-        PROJECT_PATH="${{ github.event.inputs.project_path || secrets.PAW_PROJECT_PATH }}"
+        echo "🔍 Validating GitHub Secrets..."
+        
+        if [ -z "$PAW_USERNAME" ]; then
+          echo "❌ PAW_USERNAME secret is not set"
+          exit 1
+        fi
+        
+        if [ -z "$PAW_TOKEN" ]; then
+          echo "❌ PAW_TOKEN secret is not set"
+          exit 1
+        fi
+        
+        if [ -z "$PAW_HOST" ]; then
+          echo "❌ PAW_HOST secret is not set"
+          exit 1
+        fi
+        
+        echo "✅ All required secrets are configured"
+        echo "   Username: $PAW_USERNAME"
+        echo "   Host: $PAW_HOST"
+        echo "   Token: [HIDDEN]"
+    
+    - name: Deploy to PythonAnywhere
+      env:
+        PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
+        PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
+        PAW_HOST: ${{ secrets.PAW_HOST }}
+        PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+      run: |
+        # Determine project path
+        if [ -n "${{ github.event.inputs.project_path }}" ]; then
+          PROJECT_PATH="${{ github.event.inputs.project_path }}"
+        elif [ -n "$PAW_PROJECT_PATH" ]; then
+          PROJECT_PATH="$PAW_PROJECT_PATH"
+        else
+          PROJECT_PATH="/home/$PAW_USERNAME/pythonanywhere-git-pipeline"
+        fi
+        
+        # Determine branch
         BRANCH="${{ github.event.inputs.branch || 'main' }}"
         
         echo "🚀 Deploying to PythonAnywhere..."
         echo "   📁 Project Path: $PROJECT_PATH"
         echo "   🌿 Branch: $BRANCH"
+        echo "   👤 Username: $PAW_USERNAME"
+        echo "   🌐 Host: $PAW_HOST"
         
-        python github_deploy.py --project-path "$PROJECT_PATH" --branch "$BRANCH"
+        # Run deployment with enhanced error handling
+        python enhanced_error_handling.py --project-path "$PROJECT_PATH" --branch "$BRANCH" --use-env
+    
+    - name: Create deployment marker
+      if: success()
+      env:
+        PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
+        PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
+        PAW_HOST: ${{ secrets.PAW_HOST }}
+      run: |
+        echo "📝 Creating deployment marker..."
+        python test_deployment.py create
     
     - name: Notify deployment status
       if: always()
       run: |
         if [ ${{ job.status }} == 'success' ]; then
           echo "✅ Deployment to PythonAnywhere completed successfully!"
+          echo "🎉 Your code is now live!"
         else
           echo "❌ Deployment to PythonAnywhere failed!"
+          echo "💡 Check the logs above for error details"
+          echo "🔧 Common fixes:"
+          echo "   - Verify GitHub Secrets are set correctly"
+          echo "   - Check PythonAnywhere API token is valid"
+          echo "   - Ensure project path exists on PythonAnywhere"
         fi
