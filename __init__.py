@@ -5,17 +5,23 @@ A Python package for executing git operations on PythonAnywhere hosting service
 via their console API using credentials provided through YAML configuration.
 """
 
-from .main import (
-    PythonAnywhereGitPipeline,
-    PAWCredentials,
-    load_credentials_from_yaml,
-    load_credentials_from_env,
-    load_credentials
-)
-
-__version__ = "1.0.0"
-__author__ = "Your Name"
-__email__ = "your.email@example.com"
+try:
+    from .main import (
+        PythonAnywhereGitPipeline,
+        PAWCredentials,
+        load_credentials_from_yaml,
+        load_credentials_from_env,
+        load_credentials
+    )
+except ImportError:
+    # Fallback for when run as script or in tests
+    from main import (
+        PythonAnywhereGitPipeline,
+        PAWCredentials,
+        load_credentials_from_yaml,
+        load_credentials_from_env,
+        load_credentials
+    )
 
 __all__ = [
     "PythonAnywhereGitPipeline",

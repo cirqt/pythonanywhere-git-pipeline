@@ -175,9 +175,16 @@ class PythonAnywhereGitPipeline:
             console_id = console_response.json()['id']
             self.logger.info(f"Created console session: {console_id}")
             
-            # Important: We need to "start" the console by trying to interact with it
-            # This simulates what happens when you access it in browser
-            self._initialize_console(console_id)
+            # Important: Try to "start" the console programmatically
+            # Note: PythonAnywhere may require browser access to fully start consoles
+            console_ready = self._initialize_console(console_id)
+            
+            if not console_ready:
+                self.logger.error(f"Console {console_id} could not be initialized programmatically.")
+                self.logger.error("This is a known limitation of PythonAnywhere's API.")
+                self.logger.error("Console commands require the console to be accessed in a browser first.")
+                self.logger.error("Please visit your PythonAnywhere dashboard and click on the console to activate it.")
+                raise Exception("Console initialization failed - browser access required")
             
             results = []
             for command in commands:
@@ -208,50 +215,65 @@ class PythonAnywhereGitPipeline:
     def _initialize_console(self, console_id: int, timeout: int = 60):
         """
         Initialize console by attempting to start it through API interactions
-        This simulates what happens when you first access a console in browser
+        PythonAnywhere requires console to be accessed in browser first, but we can try
+        multiple approaches to wake it up programmatically.
         """
-        self.logger.info(f"Initializing console {console_id}...")
+        self.logger.info(f"Attempting to initialize console {console_id}...")
         start_time = time.time()
         
-        while time.time() - start_time < timeout:
+        # Try different initialization strategies
+        strategies = [
+            ("echo test", "Basic echo command"),
+            ("pwd", "Print working directory"), 
+            ("whoami", "Check user"),
+            ("ls", "List directory"),
+            ("bash --version", "Check bash version")
+        ]
+        
+        for attempt, (cmd, desc) in enumerate(strategies):
+            if time.time() - start_time > timeout:
+                break
+                
             try:
-                # Try to send a simple command to "wake up" the console
-                # Use a harmless command that should work in any shell
-                wake_response = self.session.post(
+                self.logger.info(f"Initialization attempt {attempt + 1}: {desc}")
+                
+                # Send initialization command
+                init_response = self.session.post(
                     f"{self.api_base}/consoles/{console_id}/send_input/",
-                    json={'input': 'echo "console_ready"\n'}
+                    json={'input': f'{cmd}\n'}
                 )
                 
-                if wake_response.status_code == 200:
-                    self.logger.info(f"Console {console_id} wake-up command sent successfully")
+                if init_response.status_code == 200:
+                    self.logger.info(f"Console {console_id} accepted command: {cmd}")
                     
-                    # Wait a moment for console to process
-                    time.sleep(3)
+                    # Wait for output
+                    time.sleep(2)
                     
-                    # Try to get output to confirm console is responding
+                    # Check for output
                     output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
                     if output_response.status_code == 200:
                         output_data = output_response.json()
                         output_text = output_data.get('output', '')
                         
-                        if 'console_ready' in output_text or output_text.strip():
-                            self.logger.info(f"Console {console_id} is now active and responding")
-                            return
+                        if output_text.strip():
+                            self.logger.info(f"Console {console_id} is responding with output: {output_text[:100]}")
+                            return True
                         else:
-                            self.logger.info(f"Console {console_id} sent command but no output yet...")
-                    
-                elif "Console not yet started" in wake_response.text:
-                    self.logger.info(f"Console {console_id} still starting up...")
+                            self.logger.info(f"Console {console_id} command sent but no output yet...")
+                            
+                elif "Console not yet started" in init_response.text:
+                    self.logger.info(f"Console {console_id} still not started, trying next strategy...")
                 else:
-                    self.logger.warning(f"Unexpected response while initializing console {console_id}: {wake_response.status_code} - {wake_response.text}")
+                    self.logger.warning(f"Unexpected response for console {console_id}: {init_response.status_code} - {init_response.text[:100]}")
                     
             except Exception as e:
-                self.logger.info(f"Console {console_id} initialization attempt failed: {e}")
+                self.logger.info(f"Console {console_id} initialization attempt {attempt + 1} failed: {e}")
             
-            time.sleep(5)  # Wait before retrying
+            time.sleep(3)  # Wait between attempts
         
-        # If we get here, initialization may have timed out, but let's try to proceed anyway
-        self.logger.warning(f"Console {console_id} initialization timeout, proceeding anyway...")
+        # If we get here, the console never responded properly
+        self.logger.warning(f"Console {console_id} initialization attempts exhausted. This may be due to PythonAnywhere requiring browser access to start consoles.")
+        return False
 
     def _wait_for_console_ready(self, console_id: int, timeout: int = 30):
         """Wait for console to be ready"""
