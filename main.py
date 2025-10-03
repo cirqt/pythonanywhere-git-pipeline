@@ -161,16 +161,23 @@ class PythonAnywhereGitPipeline:
         """
         console_id = None
         try:
-            # Create console session
-            console_response = self.session.post(f"{self.api_base}/consoles/")
+            # Create console session with bash executable
+            console_data = {
+                "executable": "bash",
+                "arguments": "",
+                "working_directory": "/home/" + self.credentials.username
+            }
+            
+            console_response = self.session.post(f"{self.api_base}/consoles/", json=console_data)
             if console_response.status_code != 201:
                 raise Exception(f"Failed to create console: {console_response.text}")
             
             console_id = console_response.json()['id']
             self.logger.info(f"Created console session: {console_id}")
             
-            # Wait for console to be ready
-            self._wait_for_console_ready(console_id)
+            # Important: We need to "start" the console by trying to interact with it
+            # This simulates what happens when you access it in browser
+            self._initialize_console(console_id)
             
             results = []
             for command in commands:
@@ -198,15 +205,84 @@ class PythonAnywhereGitPipeline:
             if console_id:
                 self._cleanup_console(console_id)
     
+    def _initialize_console(self, console_id: int, timeout: int = 60):
+        """
+        Initialize console by attempting to start it through API interactions
+        This simulates what happens when you first access a console in browser
+        """
+        self.logger.info(f"Initializing console {console_id}...")
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            try:
+                # Try to send a simple command to "wake up" the console
+                # Use a harmless command that should work in any shell
+                wake_response = self.session.post(
+                    f"{self.api_base}/consoles/{console_id}/send_input/",
+                    json={'input': 'echo "console_ready"\n'}
+                )
+                
+                if wake_response.status_code == 200:
+                    self.logger.info(f"Console {console_id} wake-up command sent successfully")
+                    
+                    # Wait a moment for console to process
+                    time.sleep(3)
+                    
+                    # Try to get output to confirm console is responding
+                    output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
+                    if output_response.status_code == 200:
+                        output_data = output_response.json()
+                        output_text = output_data.get('output', '')
+                        
+                        if 'console_ready' in output_text or output_text.strip():
+                            self.logger.info(f"Console {console_id} is now active and responding")
+                            return
+                        else:
+                            self.logger.info(f"Console {console_id} sent command but no output yet...")
+                    
+                elif "Console not yet started" in wake_response.text:
+                    self.logger.info(f"Console {console_id} still starting up...")
+                else:
+                    self.logger.warning(f"Unexpected response while initializing console {console_id}: {wake_response.status_code} - {wake_response.text}")
+                    
+            except Exception as e:
+                self.logger.info(f"Console {console_id} initialization attempt failed: {e}")
+            
+            time.sleep(5)  # Wait before retrying
+        
+        # If we get here, initialization may have timed out, but let's try to proceed anyway
+        self.logger.warning(f"Console {console_id} initialization timeout, proceeding anyway...")
+
     def _wait_for_console_ready(self, console_id: int, timeout: int = 30):
         """Wait for console to be ready"""
         start_time = time.time()
+        
+        self.logger.info(f"Warming up console {console_id}...")
+        
         while time.time() - start_time < timeout:
-            response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
-            if response.status_code == 200:
-                return
-            time.sleep(1)
-        raise Exception("Console readiness timeout")
+            try:
+                # First, check console status
+                status_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
+                if status_response.status_code == 200:
+                    self.logger.info(f"Console {console_id} status OK")
+                    
+                    # Try to get latest output to fully initialize the console
+                    output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
+                    if output_response.status_code == 200:
+                        self.logger.info(f"Console {console_id} is fully ready")
+                        return
+                    else:
+                        self.logger.info(f"Console {console_id} still warming up... (output endpoint: {output_response.status_code})")
+                        
+                else:
+                    self.logger.info(f"Console {console_id} status not ready: {status_response.status_code}")
+                    
+            except Exception as e:
+                self.logger.info(f"Console {console_id} not ready yet: {e}")
+            
+            time.sleep(3)  # Wait a bit longer between checks
+        
+        raise Exception(f"Console {console_id} readiness timeout after {timeout} seconds")
     
     def _send_command_to_console(self, console_id: int, command: str) -> Dict[str, Any]:
         """Send command to console and get output"""
@@ -217,10 +293,26 @@ class PythonAnywhereGitPipeline:
         )
         
         if send_response.status_code != 200:
-            return {'error': f"Failed to send command: {send_response.text}"}
+            error_msg = send_response.text
+            # If console still not started, give it one more chance
+            if "Console not yet started" in error_msg:
+                self.logger.warning(f"Console {console_id} not started, reinitializing...")
+                try:
+                    self._initialize_console(console_id, timeout=30)
+                    # Retry once
+                    send_response = self.session.post(
+                        f"{self.api_base}/consoles/{console_id}/send_input/",
+                        json={'input': command + '\n'}
+                    )
+                    if send_response.status_code != 200:
+                        return {'error': f"Failed to send command after reinit: {send_response.text}"}
+                except Exception as e:
+                    return {'error': f"Console reinitialization failed: {e}"}
+            else:
+                return {'error': f"Failed to send command: {error_msg}"}
         
-        # Wait for output
-        time.sleep(2)
+        # Wait for command to execute
+        time.sleep(3)
         
         # Get latest output
         output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
@@ -229,11 +321,31 @@ class PythonAnywhereGitPipeline:
             return {'error': f"Failed to get output: {output_response.text}"}
         
         output_data = output_response.json()
+        output_text = output_data.get('output', '')
+        
         return {
             'command': command,
-            'output': output_data.get('output', ''),
-            'error': None if 'error' not in output_data.get('output', '').lower() else output_data.get('output')
+            'output': output_text,
+            'error': None if not self._is_error_output(output_text) else output_text
         }
+    
+    def _is_error_output(self, output: str) -> bool:
+        """Check if output contains error indicators"""
+        if not output:
+            return False
+        
+        error_indicators = [
+            'error:', 'Error:', 'ERROR:',
+            'failed:', 'Failed:', 'FAILED:',
+            'fatal:', 'Fatal:', 'FATAL:',
+            'permission denied',
+            'command not found',
+            'no such file',
+            'cannot access'
+        ]
+        
+        output_lower = output.lower()
+        return any(indicator.lower() in output_lower for indicator in error_indicators)
     
     def _cleanup_console(self, console_id: int):
         """Clean up console session"""
