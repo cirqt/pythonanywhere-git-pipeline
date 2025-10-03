@@ -52,8 +52,20 @@ class PythonAnywhereGitPipeline:
     def test_connection(self) -> bool:
         """Test connection to PythonAnywhere API"""
         try:
+            # Try the consoles endpoint first (more likely to be accessible)
+            response = self.session.get(f"{self.api_base}/consoles/")
+            if response.status_code == 200:
+                return True
+            
+            # Fallback to cpu endpoint
             response = self.session.get(f"{self.api_base}/cpu/")
-            return response.status_code == 200
+            if response.status_code == 200:
+                return True
+                
+            # If both fail, log the error
+            self.logger.error(f"API connection failed. Status: {response.status_code}, Response: {response.text}")
+            return False
+            
         except Exception as e:
             self.logger.error(f"Connection test failed: {e}")
             return False

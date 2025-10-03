@@ -76,6 +76,12 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         print("Testing connection to PythonAnywhere...")
         if not pipeline.test_connection():
             print("Failed to connect to PythonAnywhere API")
+            print("Possible issues:")
+            print("  1. Invalid PAW_TOKEN - check your API token")
+            print("  2. Incorrect PAW_USERNAME")
+            print("  3. Network connectivity issues")
+            print("  4. PythonAnywhere API endpoint changes")
+            print(f"  API Base URL: {pipeline.api_base}")
             return False
         
         print("Connected to PythonAnywhere API")
