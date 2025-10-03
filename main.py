@@ -36,6 +36,13 @@ class PythonAnywhereGitPipeline:
     def __init__(self, credentials: PAWCredentials):
         self.credentials = credentials
         
+        # Setup logging first
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s'
+        )
+        self.logger = logging.getLogger(__name__)
+        
         # Fix API URL format - PythonAnywhere API documentation specifies exact hosts
         host = credentials.host.replace('https://', '').replace('http://', '').rstrip('/')
         
@@ -57,13 +64,6 @@ class PythonAnywhereGitPipeline:
         })
         
         self.logger.info(f"API Base URL: {self.api_base}")
-        
-        # Setup logging
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s'
-        )
-        self.logger = logging.getLogger(__name__)
     
     def test_connection(self) -> bool:
         """Test connection to PythonAnywhere API"""
