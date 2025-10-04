@@ -107,6 +107,8 @@ class PythonAnywhereGitPipeline:
             commands.append(f"git config credential.helper store")
             commands.append(f"echo 'https://git:{github_token}@github.com' > ~/.git-credentials")
         
+        # Configure git pull strategy to handle divergent branches
+        commands.append(f"git config pull.rebase false")  # Use merge strategy
         commands.append(f"git pull origin {branch}")
         
         return self._execute_console_commands(commands)
