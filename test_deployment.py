@@ -33,13 +33,13 @@ class DeploymentTester:
         with open(self.deployment_info_file, 'w') as f:
             json.dump(deployment_info, f, indent=2)
         
-        print(f"✅ Created deployment marker: {deployment_info['deployment_id']}")
+        print(f"Created deployment marker: {deployment_info['deployment_id']}")
         return deployment_info
     
     def verify_deployment(self):
         """Verify deployment by checking the marker file"""
         if not self.deployment_info_file.exists():
-            print("❌ Deployment marker file not found")
+            print("Deployment marker file not found")
             return False
         
         with open(self.deployment_info_file, 'r') as f:
@@ -61,7 +61,7 @@ class DeploymentTester:
         with open(self.deployment_info_file, 'w') as f:
             json.dump(info, f, indent=2)
         
-        print("✅ Deployment verified successfully!")
+        print("Deployment verified successfully!")
         return True
     
     def get_git_commit_hash(self):
@@ -104,10 +104,10 @@ class DeploymentTester:
         print("🏥 Health Check Results")
         print("=" * 50)
         for check, status in checks.items():
-            status_icon = "✅" if status else "❌"
+            status_icon = "PASS" if status else "FAIL"
             print(f"{status_icon} {check.replace('_', ' ').title()}: {'PASS' if status else 'FAIL'}")
         print("=" * 50)
-        print(f"Overall Status: {'✅ HEALTHY' if all_passed else '❌ UNHEALTHY'}")
+        print(f"Overall Status: {'HEALTHY' if all_passed else 'UNHEALTHY'}")
         
         return all_passed
     
@@ -148,7 +148,7 @@ def create_version_file():
     with open("version.json", "w") as f:
         json.dump(version_info, f, indent=2)
     
-    print(f"✅ Created version file: {version_info['version']}")
+    print(f"Created version file: {version_info['version']}")
     return version_info
 
 
@@ -189,7 +189,7 @@ This file verifies that the deployment pipeline is working correctly.
     with open(test_file, 'w') as f:
         f.write(test_content)
     
-    print(f"✅ Updated deployment test file - Test #{counter}")
+    print(f"Updated deployment test file - Test #{counter}")
     return counter
 
 

@@ -20,7 +20,7 @@ if pipeline_path.exists():
 try:
     from main import PythonAnywhereGitPipeline, load_credentials_from_yaml
 except ImportError:
-    print("❌ PythonAnywhere Git Pipeline not found!")
+    print("PythonAnywhere Git Pipeline not found!")
     print("   Make sure you have either:")
     print("   1. Installed the package: pip install pythonanywhere-git-pipeline")
     print("   2. Added it as a git submodule in 'paw_pipeline' directory")
@@ -51,7 +51,7 @@ class ProjectDeployer:
             self.pipeline = PythonAnywhereGitPipeline(self.credentials)
             return True
         except Exception as e:
-            print(f"❌ Failed to load configuration: {e}")
+            print(f"Failed to load configuration: {e}")
             return False
     
     def test_connection(self):
@@ -59,12 +59,12 @@ class ProjectDeployer:
         if not self.pipeline:
             return False
         
-        print("🔍 Testing connection to PythonAnywhere...")
+        print("Testing connection to PythonAnywhere...")
         if self.pipeline.test_connection():
-            print("✅ Connection successful!")
+            print("Connection successful!")
             return True
         else:
-            print("❌ Connection failed!")
+            print("Connection failed!")
             return False
     
     def deploy_project(self, project_path: str, branch: str = "main"):
@@ -75,18 +75,18 @@ class ProjectDeployer:
             project_path: Path to project on PythonAnywhere
             branch: Git branch to deploy
         """
-        print(f"🚀 Deploying project: {project_path}")
+        print(f"Deploying project: {project_path}")
         print(f"   Branch: {branch}")
         
         result = self.pipeline.execute_git_pull(project_path, branch)
         
         if result['success']:
-            print("✅ Deployment successful!")
+            print("Deployment successful!")
             for cmd_result in result['results']:
                 if cmd_result['output'].strip():
                     print(f"   Output: {cmd_result['output'].strip()}")
         else:
-            print("❌ Deployment failed!")
+            print("Deployment failed!")
             if 'error' in result:
                 print(f"   Error: {result['error']}")
             for cmd_result in result['results']:
@@ -105,7 +105,7 @@ class ProjectDeployer:
         successful_deployments = 0
         total_projects = len(projects)
         
-        print(f"🚀 Deploying {total_projects} projects...")
+        print(f"Deploying {total_projects} projects...")
         
         for i, project in enumerate(projects, 1):
             project_path = project['path']
@@ -165,13 +165,13 @@ def main():
                     })
             
             if not projects:
-                print("❌ No projects defined in configuration file")
+                print("No projects defined in configuration file")
                 return 1
             
             success = deployer.deploy_multiple_projects(projects)
             
         except Exception as e:
-            print(f"❌ Failed to load project configurations: {e}")
+            print(f"Failed to load project configurations: {e}")
             return 1
     
     elif args.project_path:
@@ -179,7 +179,7 @@ def main():
         success = deployer.deploy_project(args.project_path, args.branch)
     
     else:
-        print("❌ Please specify either --project-path or --multiple")
+        print("Please specify either --project-path or --multiple")
         return 1
     
     return 0 if success else 1

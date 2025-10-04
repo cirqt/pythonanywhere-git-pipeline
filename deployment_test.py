@@ -41,9 +41,9 @@ def verify_deployment():
     print("=" * 40)
     
     if info['test_counter'] > 0:
-        print("✅ Deployment test file is present and accessible")
+        print("Deployment test file is present and accessible")
     else:
-        print("❌ Deployment test counter not properly set")
+        print("Deployment test counter not properly set")
     
     return info
 

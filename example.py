@@ -19,10 +19,10 @@ def example_git_pull():
         # Test connection
         print("Testing connection to PythonAnywhere...")
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return False
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Execute git pull
         project_path = "/home/yourusername/myproject"  # Change this to your project path
@@ -33,19 +33,19 @@ def example_git_pull():
         
         # Display results
         if result['success']:
-            print("✅ Git pull completed successfully!")
+            print("Git pull completed successfully!")
             for cmd_result in result['results']:
                 print(f"Command: {cmd_result['command']}")
                 print(f"Output: {cmd_result['output']}")
         else:
-            print("❌ Git pull failed!")
+            print("Git pull failed!")
             if 'error' in result:
                 print(f"Error: {result['error']}")
             
         return result['success']
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return False
 
 
@@ -61,10 +61,10 @@ def example_git_clone():
         # Test connection
         print("Testing connection to PythonAnywhere...")
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return False
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Clone repository
         repo_url = "https://github.com/yourusername/yourproject.git"  # Change this
@@ -76,19 +76,19 @@ def example_git_clone():
         
         # Display results
         if result['success']:
-            print("✅ Git clone completed successfully!")
+            print("Git clone completed successfully!")
             for cmd_result in result['results']:
                 print(f"Command: {cmd_result['command']}")
                 print(f"Output: {cmd_result['output']}")
         else:
-            print("❌ Git clone failed!")
+            print("Git clone failed!")
             if 'error' in result:
                 print(f"Error: {result['error']}")
             
         return result['success']
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return False
 
 
@@ -104,10 +104,10 @@ def example_git_push():
         # Test connection
         print("Testing connection to PythonAnywhere...")
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return False
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Execute git push
         project_path = "/home/yourusername/myproject"  # Change this to your project path
@@ -119,19 +119,19 @@ def example_git_push():
         
         # Display results
         if result['success']:
-            print("✅ Git push completed successfully!")
+            print("Git push completed successfully!")
             for cmd_result in result['results']:
                 print(f"Command: {cmd_result['command']}")
                 print(f"Output: {cmd_result['output']}")
         else:
-            print("❌ Git push failed!")
+            print("Git push failed!")
             if 'error' in result:
                 print(f"Error: {result['error']}")
             
         return result['success']
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return False
 
 
@@ -146,10 +146,10 @@ def example_multiple_operations():
         
         # Test connection
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return False
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Define multiple projects
         projects = [
@@ -172,15 +172,15 @@ def example_multiple_operations():
             result = pipeline.execute_git_pull(project['path'], project['branch'])
             
             if result['success']:
-                print(f"✅ {project['name']} updated successfully")
+                print(f"{project['name']} updated successfully")
             else:
-                print(f"❌ {project['name']} update failed")
+                print(f"{project['name']} update failed")
                 all_successful = False
         
         return all_successful
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return False
 
 
