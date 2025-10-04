@@ -113,29 +113,6 @@ class PythonAnywhereGitPipeline:
         
         return self._execute_console_commands(commands)
     
-    def execute_git_clone(self, repo_url: str, target_path: str, branch: str = "main", github_token: str = None) -> Dict[str, Any]:
-        """
-        Clone a git repository to PythonAnywhere
-        
-        Args:
-            repo_url: Git repository URL
-            target_path: Target path on PythonAnywhere
-            branch: Git branch to clone (default: main)
-            github_token: GitHub personal access token for private repos
-            
-        Returns:
-            Dictionary containing execution results
-        """
-        # Modify repo URL to include token if provided
-        if github_token and 'github.com' in repo_url:
-            repo_url = repo_url.replace('https://github.com/', f'https://git:{github_token}@github.com/')
-        
-        commands = [
-            f"git clone -b {branch} {repo_url} {target_path}"
-        ]
-        
-        return self._execute_console_commands(commands)
-    
     def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
         """
         Execute git add, commit, and push commands in PythonAnywhere console
@@ -487,8 +464,7 @@ def main():
     parser.add_argument('--config', '-c', required=True, help='Path to YAML configuration file')
     parser.add_argument('--project-path', '-p', required=True, help='Project path on PythonAnywhere')
     parser.add_argument('--branch', '-b', default='main', help='Git branch (default: main)')
-    parser.add_argument('--operation', '-o', choices=['pull', 'clone', 'push'], default='pull', help='Git operation')
-    parser.add_argument('--repo-url', '-r', help='Repository URL (required for clone operation)')
+    parser.add_argument('--operation', '-o', choices=['pull', 'push'], default='pull', help='Git operation')
     parser.add_argument('--commit-message', '-m', help='Commit message (for push operation)')
     
     args = parser.parse_args()
@@ -502,37 +478,32 @@ def main():
         
         # Test connection
         if not pipeline.test_connection():
-            print("❌ Failed to connect to PythonAnywhere API")
+            print("Failed to connect to PythonAnywhere API")
             return 1
         
-        print("✅ Connected to PythonAnywhere API")
+        print("Connected to PythonAnywhere API")
         
         # Execute operation
         if args.operation == 'pull':
             result = pipeline.execute_git_pull(args.project_path, args.branch)
-        elif args.operation == 'clone':
-            if not args.repo_url:
-                print("❌ Repository URL is required for clone operation")
-                return 1
-            result = pipeline.execute_git_clone(args.repo_url, args.project_path, args.branch)
         elif args.operation == 'push':
             result = pipeline.execute_git_push(args.project_path, args.branch, args.commit_message)
         
         # Display results
         if result['success']:
-            print("✅ Git operation completed successfully")
+            print("Git operation completed successfully")
             for cmd_result in result['results']:
                 print(f"Command: {cmd_result['command']}")
                 print(f"Output: {cmd_result['output']}")
         else:
-            print("❌ Git operation failed")
+            print("Git operation failed")
             if 'error' in result:
                 print(f"Error: {result['error']}")
             
         return 0 if result['success'] else 1
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         return 1
 
 

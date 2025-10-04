@@ -34,15 +34,15 @@ def load_credentials_from_env() -> PAWCredentials:
         missing_vars.append('PAW_HOST')
     
     if missing_vars:
-        print(f"❌ Missing required environment variables: {', '.join(missing_vars)}")
-        print("💡 Please set these GitHub Secrets in your repository:")
+        print(f"Missing required environment variables: {', '.join(missing_vars)}")
+        print("Please set these GitHub Secrets in your repository:")
         print("   - PAW_USERNAME: Your PythonAnywhere username")
         print("   - PAW_TOKEN: Your PythonAnywhere API token")
         print("   - PAW_HOST: Your domain (e.g., username.pythonanywhere.com)")
         raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
     
-    print(f"✅ Loaded credentials for user: {username}")
-    print(f"✅ Using domain: {host}")
+    print(f"Loaded credentials for user: {username}")
+    print(f"Using domain: {host}")
     
     return PAWCredentials(username=username, token=token, host=host)
 
@@ -126,10 +126,10 @@ def main():
     success = deploy_to_pythonanywhere(args.project_path, args.branch)
     
     if success:
-        print("🎉 GitHub Actions deployment completed successfully!")
+        print("GitHub Actions deployment completed successfully!")
         sys.exit(0)
     else:
-        print("💥 GitHub Actions deployment failed!")
+        print("GitHub Actions deployment failed!")
         sys.exit(1)
 
 

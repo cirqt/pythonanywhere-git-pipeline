@@ -50,7 +50,7 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -67,6 +67,7 @@ jobs:
         PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
         python github_deploy.py --project-path "${{ secrets.PAW_PROJECT_PATH }}" --branch main
 
