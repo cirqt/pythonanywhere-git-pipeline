@@ -45,7 +45,7 @@ class DeploymentTester:
         with open(self.deployment_info_file, 'r') as f:
             info = json.load(f)
         
-        print("🔍 Deployment Verification")
+        print("Deployment Verification")
         print("=" * 50)
         print(f"Deployment ID: {info['deployment_id']}")
         print(f"Timestamp: {info['timestamp']}")
