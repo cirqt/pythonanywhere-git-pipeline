@@ -98,20 +98,22 @@ class PythonAnywhereGitPipeline:
         Returns:
             Dictionary containing execution results
         """
-        commands = [
-            f"cd {project_path}"
-        ]
+        # Build command sequence that runs in the project directory
+        command_parts = [f"cd {project_path}"]
         
         # Add GitHub token authentication if provided
         if github_token:
-            commands.append(f"git config credential.helper store")
-            commands.append(f"echo 'https://git:{github_token}@github.com' > ~/.git-credentials")
+            command_parts.append("git config credential.helper store")
+            command_parts.append(f"echo 'https://git:{github_token}@github.com' > ~/.git-credentials")
         
         # Configure git pull strategy to handle divergent branches
-        commands.append(f"git config pull.rebase false")  # Use merge strategy
-        commands.append(f"git pull origin {branch}")
+        command_parts.append("git config pull.rebase false")
+        command_parts.append(f"git pull origin {branch}")
         
-        return self._execute_console_commands(commands)
+        # Join all commands with && to ensure they run in sequence in the same directory
+        full_command = " && ".join(command_parts)
+        
+        return self._execute_console_commands([full_command])
     
     def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
         """
@@ -130,14 +132,18 @@ class PythonAnywhereGitPipeline:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             commit_message = f"Automated commit from PythonAnywhere - {timestamp}"
         
-        commands = [
+        # Build command sequence that runs in the project directory
+        command_parts = [
             f"cd {project_path}",
             "git add .",
             f'git commit -m "{commit_message}"',
             f"git push origin {branch}"
         ]
         
-        return self._execute_console_commands(commands)
+        # Join all commands with && to ensure they run in sequence in the same directory
+        full_command = " && ".join(command_parts)
+        
+        return self._execute_console_commands([full_command])
     
     def _execute_console_commands(self, commands: list) -> Dict[str, Any]:
         """
