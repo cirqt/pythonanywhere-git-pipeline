@@ -22,7 +22,7 @@ on:
 # - PAW_TOKEN: Your PythonAnywhere API token  
 # - PAW_HOST: Your PythonAnywhere domain (e.g., username.pythonanywhere.com)
 # - PAW_PROJECT_PATH: Default project path (e.g., /home/username/myproject)
-# - GITHUB_TOKEN: GitHub personal access token (for private repos)
+# - GIT_TOKEN: GitHub personal access token (for private repos)
 
 jobs:
   deploy:
@@ -48,7 +48,7 @@ jobs:
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
         echo "Validating GitHub Secrets..."
         
@@ -76,10 +76,10 @@ jobs:
         echo "   Username: $PAW_USERNAME"
         echo "   Host: $PAW_HOST"
         echo "   Project Path: $PAW_PROJECT_PATH"
-        if [ -n "$GITHUB_TOKEN" ]; then
-          echo "   GitHub Token: Found"
+        if [ -n "$GIT_TOKEN" ]; then
+          echo "   Git Token: Found"
         else
-          echo "   GitHub Token: Not set (okay for public repos)"
+          echo "   Git Token: Not set (okay for public repos)"
         fi
     
     - name: Deploy to PythonAnywhere
@@ -88,7 +88,7 @@ jobs:
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
         # Determine project path
         if [ -n "${{ github.event.inputs.project_path }}" ]; then

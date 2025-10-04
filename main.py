@@ -105,7 +105,7 @@ class PythonAnywhereGitPipeline:
         # Add GitHub token authentication if provided
         if github_token:
             commands.append(f"git config credential.helper store")
-            commands.append(f"echo 'https://{github_token}@github.com' > ~/.git-credentials")
+            commands.append(f"echo 'https://git:{github_token}@github.com' > ~/.git-credentials")
         
         commands.append(f"git pull origin {branch}")
         
@@ -126,7 +126,7 @@ class PythonAnywhereGitPipeline:
         """
         # Modify repo URL to include token if provided
         if github_token and 'github.com' in repo_url:
-            repo_url = repo_url.replace('https://github.com/', f'https://{github_token}@github.com/')
+            repo_url = repo_url.replace('https://github.com/', f'https://git:{github_token}@github.com/')
         
         commands = [
             f"git clone -b {branch} {repo_url} {target_path}"

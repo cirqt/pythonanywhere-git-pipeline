@@ -63,7 +63,7 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         credentials = load_credentials_from_env()
         
         # Get GitHub token if available
-        github_token = os.getenv('GITHUB_TOKEN')
+        github_token = os.getenv('GIT_TOKEN')
         if github_token:
             print("GitHub token found for private repo access")
         else:
