@@ -1,6 +1,6 @@
 # Security Guide: GitHub Secrets Integration
 
-## 🔒 **Setting Up GitHub Secrets (Recommended)**
+## **Setting Up GitHub Secrets (Recommended)**
 
 ### **Step 1: Get Your PythonAnywhere Credentials**
 
@@ -91,7 +91,7 @@ credentials = load_credentials()  # Auto-detects best method
 pipeline = PythonAnywhereGitPipeline(credentials)
 ```
 
-## 🛡️ **Security Best Practices**
+## **Security Best Practices**
 
 ### **DO:**
 - Use GitHub Secrets for production deployments
@@ -173,7 +173,7 @@ for project in projects:
     print(f"{project['path']}: {'Success' if result['success'] else 'Failed'}")
 ```
 
-## 🚨 **Troubleshooting**
+## **Troubleshooting**
 
 ### **Common Issues:**
 
@@ -196,7 +196,7 @@ for project in projects:
    - Ensure project directory exists on PythonAnywhere
    - Check permissions for the project directory
 
-## 📚 **Advanced Configuration**
+## **Advanced Configuration**
 
 ### **Organization Secrets**
 
