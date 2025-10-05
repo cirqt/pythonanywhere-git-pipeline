@@ -97,10 +97,14 @@ class PythonAnywhereGitPipeline:
         Returns:
             Dictionary containing execution results
         """
-        # Simple git pull command - assumes repository is already properly configured
-        full_command = f"cd {project_path} && git pull origin {branch}"
+        # Test if path exists first, then do git pull
+        test_command = f"cd {project_path} && pwd && ls -la"
+        git_command = f"cd {project_path} && git pull origin {branch}"
         
-        return self._execute_console_commands([full_command])
+        self.logger.info(f"Testing path: {test_command}")
+        self.logger.info(f"Git command: {git_command}")
+        
+        return self._execute_console_commands([test_command, git_command])
     
     def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
         """
@@ -316,8 +320,8 @@ class PythonAnywhereGitPipeline:
             else:
                 return {'error': f"Failed to send command: {error_msg}"}
         
-        # Wait for command to execute
-        time.sleep(3)
+        # Wait for command to execute (increased wait time for git operations)
+        time.sleep(5)
         
         # Get latest output
         output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
