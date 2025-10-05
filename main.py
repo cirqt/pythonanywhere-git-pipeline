@@ -162,6 +162,9 @@ class PythonAnywhereGitPipeline:
             console_id = console_response.json()['id']
             self.logger.info(f"Created console session: {console_id}")
             
+            # Wait for console to be fully created before initialization
+            time.sleep(10)
+            
             # Important: Try to "start" the console programmatically
             # Note: PythonAnywhere may require browser access to fully start consoles
             console_ready = self._initialize_console(console_id)
@@ -199,7 +202,7 @@ class PythonAnywhereGitPipeline:
             if console_id:
                 self._cleanup_console(console_id)
     
-    def _initialize_console(self, console_id: int, timeout: int = 60):
+    def _initialize_console(self, console_id: int, timeout: int = 120):
         """
         Initialize console by attempting to start it through API interactions
         PythonAnywhere requires console to be accessed in browser first, but we can try
@@ -233,8 +236,8 @@ class PythonAnywhereGitPipeline:
                 if init_response.status_code == 200:
                     self.logger.info(f"Console {console_id} accepted command: {cmd}")
                     
-                    # Wait for output
-                    time.sleep(2)
+                    # Wait for output (increased for slower consoles)
+                    time.sleep(5)
                     
                     # Check for output
                     output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
@@ -256,7 +259,7 @@ class PythonAnywhereGitPipeline:
             except Exception as e:
                 self.logger.info(f"Console {console_id} initialization attempt {attempt + 1} failed: {e}")
             
-            time.sleep(3)  # Wait between attempts
+            time.sleep(5)  # Wait between attempts
         
         # If we get here, the console never responded properly
         self.logger.warning(f"Console {console_id} initialization attempts exhausted. This may be due to PythonAnywhere requiring browser access to start consoles.")
