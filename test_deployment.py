@@ -19,6 +19,72 @@ class DeploymentTester:
         self.project_path = project_path
         self.deployment_info_file = Path(project_path) / "deployment_info.json"
     
+    def test_console_listing(self):
+        """Test console listing functionality for PAW_CLI setup"""
+        print("Testing console listing functionality...")
+        
+        try:
+            from main import PythonAnywhereGitPipeline, load_credentials_from_environment
+            
+            # Load credentials
+            try:
+                credentials = load_credentials_from_environment()
+            except Exception as e:
+                print(f"Failed to load credentials: {e}")
+                print("Make sure PAW_USERNAME, PAW_TOKEN, and PAW_HOST are set")
+                return False
+            
+            # Initialize pipeline
+            pipeline = PythonAnywhereGitPipeline(credentials)
+            
+            # Test connection
+            if not pipeline.test_connection():
+                print("Failed to connect to PythonAnywhere API")
+                return False
+            
+            print("Connected to PythonAnywhere API successfully")
+            
+            # List available consoles
+            result = pipeline.list_available_consoles()
+            
+            if result['success']:
+                console_count = result['count']
+                print(f"Found {console_count} console sessions:")
+                
+                if console_count > 0:
+                    for console in result['consoles']:
+                        console_id = console.get('id')
+                        executable = console.get('executable', 'Unknown')
+                        print(f"  Console ID: {console_id} (executable: {executable})")
+                    
+                    # Check if PAW_CLI is already set
+                    existing_console = os.getenv('PAW_CLI')
+                    if existing_console:
+                        print(f"\nPAW_CLI is set to: {existing_console}")
+                        if any(str(c.get('id')) == existing_console for c in result['consoles']):
+                            print("PAW_CLI console ID is valid!")
+                        else:
+                            print("Warning: PAW_CLI console ID not found in available consoles")
+                    else:
+                        print(f"\nTo use always-open console feature:")
+                        print(f"1. Open PythonAnywhere dashboard and activate a console")
+                        print(f"2. Set: export PAW_CLI={result['consoles'][0].get('id')}")
+                        print(f"3. Your deployments will use the open console!")
+                else:
+                    print("No console sessions found.")
+                    print("Create a console in PythonAnywhere dashboard first.")
+                
+                return True
+            else:
+                print("Failed to list console sessions!")
+                if 'error' in result:
+                    print(f"Error: {result['error']}")
+                return False
+                
+        except Exception as e:
+            print(f"Console listing test failed: {e}")
+            return False
+
     def create_deployment_marker(self):
         """Create a deployment marker file with metadata"""
         deployment_info = {
@@ -212,8 +278,10 @@ if __name__ == "__main__":
             simple_deployment_test()
         elif command == "version":
             create_version_file()
+        elif command == "consoles":
+            tester.test_console_listing()
         else:
-            print("Usage: python test_deployment.py [create|verify|health|simple|version] [project_path]")
+            print("Usage: python test_deployment.py [create|verify|health|simple|version|consoles] [project_path]")
     else:
         print("Professional Deployment Testing Tools")
         print("Usage: python test_deployment.py [create|verify|health|simple|version] [project_path]")

@@ -26,15 +26,50 @@ pip install -e .
 
 ## Configuration
 
-### Method 1: GitHub Secrets (for CI/CD)
+### Method 1: GitHub Secrets (for CI/CD) - Recommended
 
 Add these secrets to your repo:
 - `PAW_USERNAME` - Your PythonAnywhere username
 - `PAW_TOKEN` - Your API token  
 - `PAW_HOST` - Your domain (username.pythonanywhere.com)
 - `PAW_PROJECT_PATH` - Project path (/home/username/project)
+- `PAW_CLI` - **Required** Console ID of an always-open console
 
-GitHub Actions will use these automatically.
+#### Setting Up PAW_CLI (Required for Reliable Deployments)
+
+The PAW_CLI approach bypasses PythonAnywhere's browser activation requirement and is **much more reliable** than the traditional console creation method.
+
+**Quick Setup:**
+1. **Find your console ID**:
+   ```bash
+   python test_deployment.py consoles
+   ```
+
+2. **Open and keep a console active**:
+   - Go to your PythonAnywhere dashboard
+   - Click "Consoles" → "Bash" to open a console
+   - Keep this browser tab open (or pin it)
+
+3. **Set PAW_CLI environment variable**:
+   ```bash
+   export PAW_CLI=12345  # Replace with your console ID
+   ```
+   
+4. **Add to GitHub Secrets**:
+   - Go to your repo → Settings → Secrets and Variables → Actions
+   - Add new secret: `PAW_CLI` with your console ID as the value
+
+5. **Deploy reliably**:
+   - All deployments will now use your open console
+   - No browser activation needed
+   - Much faster and more stable
+
+**Why PAW_CLI is better:**
+- ✅ No browser activation delays
+- ✅ Faster deployments (no console creation time)
+- ✅ More reliable (uses stable, initialized console)  
+- ✅ Perfect for CI/CD automation
+- ✅ One-time setup, works forever
 
 ### Method 2: YAML Config (for local use)
 
