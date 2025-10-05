@@ -2,7 +2,7 @@
 """
 Example usage of PythonAnywhere Git Pipeline
 """
-# Test counter for deployment verification: 10
+# Test counter for deployment verification: 11
 
 from main import PythonAnywhereGitPipeline, load_credentials_from_yaml
 
