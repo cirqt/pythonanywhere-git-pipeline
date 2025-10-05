@@ -62,13 +62,6 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         # Load credentials from environment (GitHub Secrets)
         credentials = load_credentials_from_env()
         
-        # Get GitHub token if available
-        github_token = os.getenv('GIT_TOKEN')
-        if github_token:
-            print("GitHub token found for private repo access")
-        else:
-            print("No GitHub token found - assuming public repo")
-        
         # Initialize pipeline
         pipeline = PythonAnywhereGitPipeline(credentials)
         
@@ -88,7 +81,7 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         
         # Execute deployment
         print(f"Deploying to {project_path} (branch: {branch})...")
-        result = pipeline.execute_git_pull(project_path, branch, github_token)
+        result = pipeline.execute_git_pull(project_path, branch)
         
         if result['success']:
             print("Deployment completed successfully!")
