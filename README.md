@@ -99,9 +99,9 @@ pipeline = PythonAnywhereGitPipeline(credentials)
 
 # Test connection and deploy
 if pipeline.test_connection():
-    print("✅ Connected to PythonAnywhere")
+    print("Connected to PythonAnywhere")
     result = pipeline.execute_git_pull("/home/yourusername/myproject", "main")
-    print("✅ Deployment successful!" if result['success'] else "❌ Deployment failed!")
+    print("Deployment successful!" if result['success'] else "Deployment failed!")
 ```
 
 #### Using YAML Configuration
@@ -116,26 +116,26 @@ pipeline = PythonAnywhereGitPipeline(credentials)
 
 # Test connection
 if pipeline.test_connection():
-    print("✅ Connected to PythonAnywhere")
+    print("Connected to PythonAnywhere")
     
     # Execute git pull
     result = pipeline.execute_git_pull("/home/yourusername/myproject", "main")
     
     if result['success']:
-        print("✅ Git pull completed successfully")
+        print("Git pull completed successfully")
         for cmd_result in result['results']:
             print(f"Output: {cmd_result['output']}")
     else:
-        print("❌ Git pull failed")
+        print("Git pull failed")
         print(f"Error: {result.get('error', 'Unknown error')}")
     
     # Execute git push with custom commit message
     push_result = pipeline.execute_git_push("/home/yourusername/myproject", "main", "Updated from PythonAnywhere")
     
     if push_result['success']:
-        print("✅ Git push completed successfully")
+        print("Git push completed successfully")
     else:
-        print("❌ Git push failed")
+        print("Git push failed")
 ```
 
 #### Smart Credential Loading (Auto-detect)

@@ -101,7 +101,7 @@ class DeploymentTester:
         
         all_passed = all(checks.values())
         
-        print("🏥 Health Check Results")
+        print("Health Check Results")
         print("=" * 50)
         for check, status in checks.items():
             status_icon = "PASS" if status else "FAIL"

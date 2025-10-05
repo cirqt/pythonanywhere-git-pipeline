@@ -38,7 +38,7 @@ The workflow will automatically use these secrets:
     python github_deploy.py --project-path "${{ secrets.PAW_PROJECT_PATH }}" --branch main
 ```
 
-## 🚀 **Usage Methods**
+## **Usage Methods**
 
 ### **Method 1: GitHub Actions (Automatic)**
 
@@ -93,20 +93,20 @@ pipeline = PythonAnywhereGitPipeline(credentials)
 
 ## 🛡️ **Security Best Practices**
 
-### **✅ DO:**
+### **DO:**
 - Use GitHub Secrets for production deployments
 - Use environment variables for local development
 - Rotate API tokens regularly
 - Use different tokens for different projects if possible
 - Keep `config.yaml` in `.gitignore`
 
-### **❌ DON'T:**
+### **DON'T:**
 - Commit `config.yaml` with real credentials to version control
 - Share API tokens in plain text
 - Use production tokens for testing
 - Store credentials in public repositories
 
-## 🔧 **Integration Examples**
+## **Integration Examples**
 
 ### **In Your Own Project**
 
@@ -170,7 +170,7 @@ projects = [
 
 for project in projects:
     result = pipeline.execute_git_pull(project["path"], project["branch"])
-    print(f"✅ {project['path']}: {'Success' if result['success'] else 'Failed'}")
+    print(f"{project['path']}: {'Success' if result['success'] else 'Failed'}")
 ```
 
 ## 🚨 **Troubleshooting**
