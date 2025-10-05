@@ -2,8 +2,18 @@
 """
 PythonAnywhere Git Pipeline
 
-A module for executing git operations on PythonAnywhere hosting service
-via their console API using credentials provided through YAML configuration.
+A simplified module for executing git operations on PythonAnywhere hosting service
+via their console API using always-open consoles (PAW_CLI approach).
+
+IMPORTANT: This module requires the PAW_CLI environment variable to be set
+to a console ID of an always-open console in your PythonAnywhere dashboard.
+This approach is much more reliable than programmatic console creation.
+
+Setup:
+1. Run: python test_deployment.py consoles
+2. Open a console in PythonAnywhere dashboard and keep it open
+3. Set: export PAW_CLI=<console_id>
+4. Deploy reliably without browser activation issues!
 """
 
 import requests
@@ -97,14 +107,18 @@ class PythonAnywhereGitPipeline:
         Returns:
             Dictionary containing execution results
         """
-        # Test if path exists first, then do git pull
+        # Reset environment and navigate to home directory first
+        reset_command = f"cd ~ && pwd"
+        # Test if path exists and navigate to project
         test_command = f"cd {project_path} && pwd && ls -la"
+        # Execute git pull
         git_command = f"cd {project_path} && git pull origin {branch}"
         
+        self.logger.info(f"Resetting directory: {reset_command}")
         self.logger.info(f"Testing path: {test_command}")
         self.logger.info(f"Git command: {git_command}")
         
-        return self._execute_console_commands([test_command, git_command])
+        return self._execute_console_commands([reset_command, test_command, git_command])
     
     def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
         """
@@ -123,7 +137,9 @@ class PythonAnywhereGitPipeline:
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             commit_message = f"Automated commit from PythonAnywhere - {timestamp}"
         
-        # Build command sequence that runs in the project directory
+        # Reset environment and build command sequence that runs in the project directory
+        reset_command = "cd ~ && pwd"
+        
         command_parts = [
             f"cd {project_path}",
             "git add .",
@@ -134,7 +150,7 @@ class PythonAnywhereGitPipeline:
         # Join all commands with && to ensure they run in sequence in the same directory
         full_command = " && ".join(command_parts)
         
-        return self._execute_console_commands([full_command])
+        return self._execute_console_commands([reset_command, full_command])
     
     def _execute_console_commands(self, commands: list) -> Dict[str, Any]:
         """
@@ -146,36 +162,30 @@ class PythonAnywhereGitPipeline:
         Returns:
             Dictionary containing execution results
         """
+        import os
+        
         console_id = None
         try:
-            # Create console session with bash executable
-            console_data = {
-                "executable": "bash",
-                "arguments": "",
-                "working_directory": "/home/" + self.credentials.username
-            }
+            # Check if we have a pre-existing console ID from environment variable
+            existing_console_id = os.getenv('PAW_CLI')
             
-            console_response = self.session.post(f"{self.api_base}/consoles/", json=console_data)
-            if console_response.status_code != 201:
-                raise Exception(f"Failed to create console: {console_response.text}")
+            if existing_console_id:
+                # Use the existing console - this is the preferred method
+                console_id = int(existing_console_id)
+                self.logger.info(f"Using pre-existing console session: {console_id}")
+                self.logger.info("Using PAW_CLI console - no creation or initialization needed")
+                
+            else:
+                # PAW_CLI not set - inform user of better approach
+                self.logger.error("PAW_CLI environment variable not set!")
+                self.logger.error("For reliable deployments, please:")
+                self.logger.error("1. Run: python test_deployment.py consoles")
+                self.logger.error("2. Open PythonAnywhere dashboard and click on a console")
+                self.logger.error("3. Set: export PAW_CLI=<console_id>")
+                self.logger.error("4. Re-run your deployment")
+                raise Exception("PAW_CLI not configured - please set up always-open console")
             
-            console_id = console_response.json()['id']
-            self.logger.info(f"Created console session: {console_id}")
-            
-            # Wait for console to be fully created before initialization
-            time.sleep(10)
-            
-            # Important: Try to "start" the console programmatically
-            # Note: PythonAnywhere may require browser access to fully start consoles
-            console_ready = self._initialize_console(console_id)
-            
-            if not console_ready:
-                self.logger.error(f"Console {console_id} could not be initialized programmatically.")
-                self.logger.error("This is a known limitation of PythonAnywhere's API.")
-                self.logger.error("Console commands require the console to be accessed in a browser first.")
-                self.logger.error("Please visit your PythonAnywhere dashboard and click on the console to activate it.")
-                raise Exception("Console initialization failed - browser access required")
-            
+            # Execute commands on the console
             results = []
             for command in commands:
                 self.logger.info(f"Executing command: {command}")
@@ -198,16 +208,18 @@ class PythonAnywhereGitPipeline:
                 'error': str(e),
                 'console_id': console_id
             }
-        finally:
-            if console_id:
-                self._cleanup_console(console_id)
     
+    # DEPRECATED: Console initialization no longer needed with PAW_CLI approach
+    # Keep for backward compatibility, but PAW_CLI is the preferred method
     def _initialize_console(self, console_id: int, timeout: int = 120):
         """
+        DEPRECATED: Use PAW_CLI environment variable instead
+        
         Initialize console by attempting to start it through API interactions
         PythonAnywhere requires console to be accessed in browser first, but we can try
         multiple approaches to wake it up programmatically.
         """
+        self.logger.warning("_initialize_console is deprecated - use PAW_CLI instead")
         self.logger.info(f"Attempting to initialize console {console_id}...")
         start_time = time.time()
         
@@ -298,11 +310,18 @@ class PythonAnywhereGitPipeline:
     
     def _send_command_to_console(self, console_id: int, command: str) -> Dict[str, Any]:
         """Send command to console and get output"""
+        self.logger.info(f"=== SENDING COMMAND TO CONSOLE {console_id} ===")
+        self.logger.info(f"Command: {command}")
+        self.logger.info(f"API endpoint: {self.api_base}/consoles/{console_id}/send_input/")
+        
         # Send command
         send_response = self.session.post(
             f"{self.api_base}/consoles/{console_id}/send_input/",
             json={'input': command + '\n'}
         )
+        
+        self.logger.info(f"Send response status: {send_response.status_code}")
+        self.logger.info(f"Send response text: {send_response.text}")
         
         if send_response.status_code != 200:
             error_msg = send_response.text
@@ -324,16 +343,24 @@ class PythonAnywhereGitPipeline:
                 return {'error': f"Failed to send command: {error_msg}"}
         
         # Wait for command to execute (increased wait time for git operations)
+        self.logger.info("Waiting 5 seconds for command execution...")
         time.sleep(5)
         
         # Get latest output
+        self.logger.info(f"Getting output from: {self.api_base}/consoles/{console_id}/get_latest_output/")
         output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
+        
+        self.logger.info(f"Output response status: {output_response.status_code}")
+        self.logger.info(f"Output response text preview: {output_response.text[:200]}...")
         
         if output_response.status_code != 200:
             return {'error': f"Failed to get output: {output_response.text}"}
         
         output_data = output_response.json()
         output_text = output_data.get('output', '')
+        
+        self.logger.info(f"Retrieved output length: {len(output_text)} characters")
+        self.logger.info(f"Output preview: {output_text[:300] if output_text else 'NO OUTPUT'}")
         
         return {
             'command': command,
@@ -359,13 +386,58 @@ class PythonAnywhereGitPipeline:
         output_lower = output.lower()
         return any(indicator.lower() in output_lower for indicator in error_indicators)
     
+    # DEPRECATED: Console cleanup no longer needed with PAW_CLI approach
+    # Keep for backward compatibility, but PAW_CLI consoles should stay open
     def _cleanup_console(self, console_id: int):
-        """Clean up console session"""
+        """
+        DEPRECATED: Use PAW_CLI environment variable instead
+        
+        Clean up console session - not recommended when using PAW_CLI
+        """
+        self.logger.warning("_cleanup_console is deprecated - PAW_CLI consoles should stay open")
         try:
             self.session.delete(f"{self.api_base}/consoles/{console_id}/")
             self.logger.info(f"Cleaned up console session: {console_id}")
         except Exception as e:
             self.logger.warning(f"Failed to cleanup console {console_id}: {e}")
+    
+    def list_available_consoles(self) -> Dict[str, Any]:
+        """
+        List all available console sessions for the user
+        Useful for finding console IDs to use with PAW_CLI environment variable
+        
+        Returns:
+            Dictionary containing list of console sessions with their IDs and status
+        """
+        try:
+            response = self.session.get(f"{self.api_base}/consoles/")
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'error': f"Failed to list consoles: {response.text}"
+                }
+            
+            consoles = response.json()
+            self.logger.info(f"Found {len(consoles)} console sessions:")
+            
+            for console in consoles:
+                console_id = console.get('id', 'Unknown')
+                executable = console.get('executable', 'Unknown')
+                self.logger.info(f"  Console ID: {console_id} (executable: {executable})")
+            
+            return {
+                'success': True,
+                'consoles': consoles,
+                'count': len(consoles)
+            }
+            
+        except Exception as e:
+            error_msg = f"Failed to list consoles: {e}"
+            self.logger.error(error_msg)
+            return {
+                'success': False,
+                'error': error_msg
+            }
 
 
 def load_credentials_from_yaml(yaml_path: str) -> PAWCredentials:
@@ -403,12 +475,13 @@ def load_credentials_from_yaml(yaml_path: str) -> PAWCredentials:
 def load_credentials_from_env() -> PAWCredentials:
     """
     Load PythonAnywhere credentials from environment variables
-    Useful for GitHub Actions and other CI/CD systems
+    Recommended for GitHub Actions and CI/CD systems
     
     Required environment variables:
     - PAW_USERNAME: PythonAnywhere username
     - PAW_TOKEN: PythonAnywhere API token  
     - PAW_HOST: PythonAnywhere host/domain
+    - PAW_CLI: Console ID of an always-open console (HIGHLY RECOMMENDED)
     
     Returns:
         PAWCredentials object
@@ -418,6 +491,28 @@ def load_credentials_from_env() -> PAWCredentials:
     username = os.getenv('PAW_USERNAME')
     token = os.getenv('PAW_TOKEN')
     host = os.getenv('PAW_HOST')
+    console_id = os.getenv('PAW_CLI')
+    
+    missing_vars = []
+    if not username:
+        missing_vars.append('PAW_USERNAME')
+    if not token:
+        missing_vars.append('PAW_TOKEN')
+    if not host:
+        missing_vars.append('PAW_HOST')
+    
+    if missing_vars:
+        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+    
+    if not console_id:
+        print("WARNING: PAW_CLI not set!")
+        print("For reliable deployments, please:")
+        print("1. Run: python test_deployment.py consoles")
+        print("2. Open a console in PythonAnywhere dashboard")  
+        print("3. Set: export PAW_CLI=<console_id>")
+        print("Deployments may fail without PAW_CLI!")
+    
+    return PAWCredentials(username=username, token=token, host=host)
     
     missing_vars = []
     if not username:

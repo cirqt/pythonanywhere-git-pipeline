@@ -22,6 +22,7 @@ on:
 # - PAW_TOKEN: Your PythonAnywhere API token  
 # - PAW_HOST: Your PythonAnywhere domain (e.g., username.pythonanywhere.com)
 # - PAW_PROJECT_PATH: Default project path (e.g., /home/username/myproject)
+# - PAW_CLI: Console ID of an always-open console (REQUIRED for reliable deployments)
 # - GIT_TOKEN: GitHub personal access token (for private repos)
 
 jobs:
@@ -48,6 +49,7 @@ jobs:
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+        PAW_CLI: ${{ secrets.PAW_CLI }}
         GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
         echo "Validating GitHub Secrets..."
@@ -72,10 +74,18 @@ jobs:
           exit 1
         fi
         
+        if [ -z "$PAW_CLI" ]; then
+          echo "ERROR: PAW_CLI secret is not set"
+          echo "This is REQUIRED for reliable deployments!"
+          echo "Please set PAW_CLI to your console ID number"
+          exit 1
+        fi
+        
         echo "All required secrets are configured"
         echo "   Username: $PAW_USERNAME"
         echo "   Host: $PAW_HOST"
         echo "   Project Path: $PAW_PROJECT_PATH"
+        echo "   Console ID: $PAW_CLI"
         if [ -n "$GIT_TOKEN" ]; then
           echo "   Git Token: Found"
         else
@@ -88,6 +98,7 @@ jobs:
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+        PAW_CLI: ${{ secrets.PAW_CLI }}
         GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: |
         # Determine project path
