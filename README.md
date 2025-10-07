@@ -14,8 +14,8 @@ Automates git operations on PythonAnywhere through their console API. Uses YAML 
 
 Clone and install:
 ```bash
-git clone https://github.com/yourusername/PAWgithubPipeline.git
-cd PAWgithubPipeline
+git clone https://github.com/cirqt/pythonanywhere-git-pipeline.git
+cd pythonanywhere-git-pipeline
 pip install -r requirements.txt
 ```
 
@@ -188,7 +188,7 @@ pipeline = PythonAnywhereGitPipeline(credentials)
 
 1. Add as submodule to your project:
 ```bash
-git submodule add https://github.com/yourusername/PAWgithubPipeline.git paw_pipeline
+git submodule add https://github.com/cirqt/pythonanywhere-git-pipeline.git paw_pipeline
 ```
 
 2. Create your project's configuration:
@@ -335,6 +335,14 @@ logging.basicConfig(level=logging.DEBUG)
 - Check PythonAnywhere's API documentation
 - Review the console output for detailed error messages
 - Ensure your PythonAnywhere account is active and has console access
+
+## Test Deployment
+
+Use the test script to verify your setup:
+
+```bash
+python test_deployment.py
+```
 #   T e s t   d e p l o y m e n t :   1 
  
  
