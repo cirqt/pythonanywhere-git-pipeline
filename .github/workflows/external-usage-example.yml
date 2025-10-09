@@ -1,0 +1,33 @@
+# Copy this to your repository at: .github/workflows/deploy.yml
+# Set these GitHub Secrets: PAW_USERNAME, PAW_TOKEN, PAW_HOST, PAW_CLI, PAW_PROJECT_PATH
+
+name: Deploy to PythonAnywhere
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - run: |
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/main.py
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/github_deploy.py
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/requirements.txt
+        pip install -r requirements.txt
+    
+    - env:
+        PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
+        PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
+        PAW_HOST: ${{ secrets.PAW_HOST }}
+        PAW_CLI: ${{ secrets.PAW_CLI }}
+        PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+      run: python github_deploy.py --project-path "$PAW_PROJECT_PATH" --branch main

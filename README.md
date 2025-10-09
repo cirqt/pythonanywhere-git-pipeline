@@ -90,18 +90,7 @@ MIT License - see LICENSE file for details
 
 ### .yml exmaple
 ```
-# Simple GitHub Actions workflow for PythonAnywhere deployment
-# Copy this to your repository at: .github/workflows/deploy.yml
-#
-# Required GitHub Secrets:
-# - PAW_USERNAME: Your PythonAnywhere username
-# - PAW_TOKEN: Your API token from PythonAnywhere Account → API Token
-# - PAW_HOST: Your domain (e.g., yourusername.pythonanywhere.com)
-# - PAW_CLI: Console ID from open console (get from URL: /consoles/12345/)
-# - PAW_PROJECT_PATH: Project path (e.g., /home/yourusername/myproject)
-
 name: Deploy to PythonAnywhere
-
 on:
   push:
     branches: [ main ]
@@ -110,7 +99,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v4
     
@@ -118,11 +106,13 @@ jobs:
       with:
         python-version: '3.11'
     
-    - name: Install dependencies
-      run: pip install requests pyyaml
+    - run: |
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/main.py
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/github_deploy.py
+        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/requirements.txt
+        pip install -r requirements.txt
     
-    - name: Deploy
-      env:
+    - env:
         PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
