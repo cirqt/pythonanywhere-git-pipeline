@@ -1,41 +1,39 @@
-name: Deploy to PythonAnywhere (Individual Pull)
+# Simple GitHub Actions workflow for PythonAnywhere deployment
+# Copy this to your repository at: .github/workflows/deploy.yml
+#
+# Required GitHub Secrets:
+# - PAW_USERNAME: Your PythonAnywhere username
+# - PAW_TOKEN: Your API token from PythonAnywhere Account → API Token
+# - PAW_HOST: Your domain (e.g., yourusername.pythonanywhere.com)
+# - PAW_CLI: Console ID from open console (get from URL: /consoles/12345/)
+# - PAW_PROJECT_PATH: Project path (e.g., /home/yourusername/myproject)
 
-# Trigger the workflow on push to main branch
+name: Deploy to PythonAnywhere
+
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.11'
     
     - name: Install dependencies
-      run: |
-        pip install requests
+      run: pip install requests pyyaml
     
-    - name: Deploy to PythonAnywhere
-      run: |
-        python individualPullToPAW.py
+    - name: Deploy
       env:
         PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
         PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_CLI: ${{ secrets.PAW_CLI }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
-        GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
-    
-    - name: Display deployment result
-      run: |
-        echo "Deployment workflow completed!"
-        echo "Check the logs above for deployment status."
+      run: python github_deploy.py --project-path "$PAW_PROJECT_PATH" --branch main
