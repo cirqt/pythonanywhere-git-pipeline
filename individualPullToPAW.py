@@ -217,13 +217,6 @@ def load_credentials_from_env() -> PAWCredentials:
     """
     Load PythonAnywhere credentials from environment variables
     Recommended for GitHub Actions and CI/CD systems
-    
-    Required environment variables:
-    - PAW_USERNAME: PythonAnywhere username
-    - PAW_TOKEN: PythonAnywhere API token  
-    - PAW_HOST: PythonAnywhere host/domain
-    - PAW_CLI: Console ID of an already initiated console
-    
     Returns:
         PAWCredentials object
     """
