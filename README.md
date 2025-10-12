@@ -1,123 +1,98 @@
 # PythonAnywhere Git Pipeline
 
-Automates git operations on PythonAnywhere through their console API. Uses YAML config or GitHub Secrets.
+Automates git operations on PythonAnywhere through their console API. Two usage methods available.
 
-## Features
+## Two Main Usage Methods
 
-- Execute git pull on PythonAnywhere remotely
-- YAML config or GitHub Secrets for credentials  
-- API token authentication
-- Basic logging
-- Works with other projects
+### 1. GitHub Actions Pipeline (Recommended)
+Use this for automatic deployment when you push to your repository. Copy the workflow file to your repo and set up GitHub secrets.
 
-## Installation
+### 2. Standalone Python Script
+Use this if you prefer to manually run deployments or integrate into your own workflow without GitHub Actions.
 
-Clone and install:
-```bash
-git clone https://github.com/cirqt/pythonanywhere-git-pipeline.git
-cd pythonanywhere-git-pipeline
-pip install -r requirements.txt
-```
-## Configuration
+## Method 1: GitHub Actions Pipeline
 
-Add these secrets to your repo:
+Copy `.github/workflows/external-usage-example.yml` to your repository and set these GitHub Secrets:
 - `PAW_USERNAME` - Your PythonAnywhere username
 - `PAW_TOKEN` - Your API token  
 - `PAW_HOST` - Your domain (username.pythonanywhere.com)
 - `PAW_PROJECT_PATH` - Project path (/home/username/project)
 - `PAW_CLI` - Console ID of a pre-initialized console
 
-The PAW_CLI approach bypasses PythonAnywhere's browser activation requirement
+## Method 2: Standalone Script
 
-**Quick Setup:**
-You can find your console ID in the web browser link when you enter the console
-```https://www.pythonanywhere.com/user/username/consoles/12345678/```
-12345678 - console ID
-   
-4. **Add to GitHub Secrets**:
-   - Go to your repo → Settings → Secrets and Variables → Actions
-   - Add new secret: `PAW_CLI` with your console ID as the value
+Download `individualPullToPAW.py` and run it directly:
+```bash
+curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/individualPullToPAW.py
+python individualPullToPAW.py
+```
+## Setup Instructions
 
-Get API token from PythonAnywhere Account → API Token.
+### For GitHub Actions (Method 1):
+1. Copy `.github/workflows/external-usage-example.yml` to your repository
+2. Set up GitHub Secrets in your repo (Settings → Secrets and Variables → Actions):
+   - `PAW_USERNAME` - Your PythonAnywhere username
+   - `PAW_TOKEN` - Your API token from PythonAnywhere Account → API Token
+   - `PAW_HOST` - Your domain (username.pythonanywhere.com) 
+   - `PAW_PROJECT_PATH` - Project path (/home/username/project)
+   - `PAW_CLI` - Console ID of a pre-initialized console
 
-Don't commit real credentials to git.
+### For Standalone Script (Method 2):
+1. Download the script:
+   ```bash
+   curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/individualPullToPAW.py
+   ```
+2. Set environment variables:
+   ```bash
+   export PAW_USERNAME="your_username"
+   export PAW_TOKEN="your_token" 
+   export PAW_HOST="username.pythonanywhere.com"
+   export PAW_PROJECT_PATH="/home/username/project"
+   export PAW_CLI="console_id"
+   ```
+3. Run the script:
+   ```bash
+   python individualPullToPAW.py
+   ```
 
-## Error Handling
+### Finding Your Console ID:
+1. Open a console in PythonAnywhere dashboard and keep it open
+2. Find your console ID in the browser URL: `https://www.pythonanywhere.com/user/username/consoles/12345678/`
+3. Use `12345678` as your `PAW_CLI` value
 
-The package provides comprehensive error handling:
+The PAW_CLI approach bypasses PythonAnywhere's browser activation requirement and is much more reliable.
 
-- Connection failures
-- Authentication errors
-- Command execution failures
-- Console creation/cleanup issues
+## Files in This Repository
 
-All errors are logged and returned in the result dictionary.
-
-## Security Notes
-
-- Never commit your `config.yaml` with real credentials to version control
-- Use environment variables for sensitive information in production
-- Regularly rotate your API tokens
-- Keep your configuration files secure
-
-## License
-
-MIT License - see LICENSE file for details
+- `main.py` - Core pipeline code (used by GitHub Actions)
+- `github_deploy.py` - Deployment logic (used by GitHub Actions)  
+- `individualPullToPAW.py` - Standalone script for manual use
+- `requirements.txt` - Python dependencies
+- `.github/workflows/external-usage-example.yml` - Example workflow file
 
 ## Troubleshooting
 
 ### Common Issues
 
 1. **Authentication Failed**
-   - Verify your API token is correct
-   - Check if your token has expired
+   - Verify your API token is correct and active
+   - Get a new token from PythonAnywhere Account → API Token
 
-2. **Console Creation Failed**
-   - Check if you have available console slots
-   - Verify your PythonAnywhere plan supports console access
+2. **Console ID Issues**
+   - Ensure you have an open console in PythonAnywhere dashboard
+   - Copy the console ID from the browser URL
 
 3. **Git Command Failed**
    - Ensure the repository exists and you have access
    - Check if the project path is correct
-   - Verify Git is properly configured on PythonAnywhere
+   - Verify Git is configured properly on PythonAnywhere
 
+### Security Notes
 
-### Support
+- Never commit credentials to version control
+- Use GitHub Secrets for environment variables
+- Regularly rotate your API tokens
 
-- Check PythonAnywhere's API documentation
-- Review the console output for detailed error messages
-- Ensure your PythonAnywhere account is active and has console access
+## Support
 
-### .yml exmaple
-```
-name: Deploy to PythonAnywhere
-on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - run: |
-        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/main.py
-        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/github_deploy.py
-        curl -O https://raw.githubusercontent.com/cirqt/pythonanywhere-git-pipeline/main/requirements.txt
-        pip install -r requirements.txt
-    
-    - env:
-        PAW_USERNAME: ${{ secrets.PAW_USERNAME }}
-        PAW_TOKEN: ${{ secrets.PAW_TOKEN }}
-        PAW_HOST: ${{ secrets.PAW_HOST }}
-        PAW_CLI: ${{ secrets.PAW_CLI }}
-        PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
-      run: python github_deploy.py --project-path "$PAW_PROJECT_PATH" --branch main
-
-```
+For issues, check the console output for detailed error messages and ensure your PythonAnywhere account has console access.
