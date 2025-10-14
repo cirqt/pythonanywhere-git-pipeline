@@ -107,18 +107,39 @@ class PythonAnywhereGitPipeline:
         Returns:
             Dictionary containing execution results
         """
+        import os
+        
         # Reset environment and navigate to home directory first
         reset_command = f"cd ~ && pwd"
         # Test if path exists and navigate to project
         test_command = f"cd {project_path} && pwd && ls -la"
-        # Execute git pull
-        git_command = f"cd {project_path} && git pull origin {branch}"
+        
+        # Check for Git credentials from environment variables
+        git_username = os.getenv('GIT_USERNAME')
+        git_token = os.getenv('GIT_TOKEN')
+        
+        commands = [reset_command, test_command]
+        
+        if git_username and git_token:
+            # Configure git credentials for private repositories
+            self.logger.info("Configuring Git credentials for private repository access")
+            config_command = f"cd {project_path} && git config credential.helper store && echo 'https://{git_username}:{git_token}@github.com' > ~/.git-credentials"
+            commands.append(config_command)
+            git_command = f"cd {project_path} && git pull origin {branch}"
+        else:
+            # No credentials provided, try without authentication (for public repos)
+            self.logger.info("No Git credentials provided - attempting public repository access")
+            git_command = f"cd {project_path} && git pull origin {branch}"
+        
+        commands.append(git_command)
         
         self.logger.info(f"Resetting directory: {reset_command}")
         self.logger.info(f"Testing path: {test_command}")
+        if git_username and git_token:
+            self.logger.info("Configuring Git credentials")
         self.logger.info(f"Git command: {git_command}")
         
-        return self._execute_console_commands([reset_command, test_command, git_command])
+        return self._execute_console_commands(commands)
     
     def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
         """

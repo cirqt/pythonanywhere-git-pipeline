@@ -31,11 +31,17 @@ python individualPullToPAW.py
 ### For GitHub Actions (Method 1):
 1. Copy `.github/workflows/external-usage-example.yml` to your repository
 2. Set up GitHub Secrets in your repo (Settings → Secrets and Variables → Actions):
+
+**Required Secrets:**
    - `PAW_USERNAME` - Your PythonAnywhere username
    - `PAW_TOKEN` - Your API token from PythonAnywhere Account → API Token
    - `PAW_HOST` - Your domain (username.pythonanywhere.com) 
    - `PAW_PROJECT_PATH` - Project path (/home/username/project)
    - `PAW_CLI` - Console ID of a pre-initialized console
+
+**For Private Repositories (Optional):**
+   - `GIT_USERNAME` - Your GitHub username
+   - `GIT_TOKEN` - Your GitHub Personal Access Token
 
 ### For Standalone Script (Method 2):
 1. Download the script:
@@ -48,6 +54,11 @@ python individualPullToPAW.py
    export PAW_TOKEN="your_token" 
    export PAW_HOST="username.pythonanywhere.com"
    export PAW_PROJECT_PATH="/home/username/project"
+   export PAW_CLI="console_id"
+   
+   # For private repositories (optional):
+   export GIT_USERNAME="your_github_username"
+   export GIT_TOKEN="your_github_token"
    export PAW_CLI="console_id"
    ```
 3. Run the script:
