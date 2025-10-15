@@ -246,7 +246,7 @@ class PythonAnywhereGitPipeline:
                 self.logger.info(f"Successfully visited console page (status: {response.status_code})")
                 
                 # Give the console a moment to initialize
-                time.sleep(3)
+                time.sleep(60)
                 
                 # Test if console is now responsive by trying to get its status
                 test_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
