@@ -141,38 +141,6 @@ class PythonAnywhereGitPipeline:
         
         return self._execute_console_commands(commands)
     
-    def execute_git_push(self, project_path: str, branch: str = "main", commit_message: str = None) -> Dict[str, Any]:
-        """
-        Execute git add, commit, and push commands in PythonAnywhere console
-        
-        Args:
-            project_path: Path to the project directory on PythonAnywhere
-            branch: Git branch to push to (default: main)
-            commit_message: Commit message (optional, defaults to timestamp-based message)
-            
-        Returns:
-            Dictionary containing execution results
-        """
-        if not commit_message:
-            import datetime
-            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            commit_message = f"Automated commit from PythonAnywhere - {timestamp}"
-        
-        # Reset environment and build command sequence that runs in the project directory
-        reset_command = "cd ~ && pwd"
-        
-        command_parts = [
-            f"cd {project_path}",
-            "git add .",
-            f'git commit -m "{commit_message}"',
-            f"git push origin {branch}"
-        ]
-        
-        # Join all commands with && to ensure they run in sequence in the same directory
-        full_command = " && ".join(command_parts)
-        
-        return self._execute_console_commands([reset_command, full_command])
-    
     def _execute_console_commands(self, commands: list) -> Dict[str, Any]:
         """
         Execute commands in PythonAnywhere console
@@ -194,7 +162,16 @@ class PythonAnywhereGitPipeline:
                 # Use the existing console - this is the preferred method
                 console_id = int(existing_console_id)
                 self.logger.info(f"Using pre-existing console session: {console_id}")
-                self.logger.info("Using PAW_CLI console - no creation or initialization needed")
+                self.logger.info("Using PAW_CLI console - attempting web activation if needed")
+                
+                # Proactively try to activate the console via web visit
+                # This is our new enhancement!
+                self.logger.info("Proactively activating console via web page visit...")
+                activation_success = self._activate_console_via_web(console_id)
+                if activation_success:
+                    self.logger.info("Console web activation successful")
+                else:
+                    self.logger.warning("Console web activation failed, but continuing anyway")
                 
             else:
                 # PAW_CLI not set - inform user of better approach
@@ -230,104 +207,72 @@ class PythonAnywhereGitPipeline:
                 'console_id': console_id
             }
     
-    # DEPRECATED: Console initialization no longer needed with PAW_CLI approach
-    # Keep for backward compatibility, but PAW_CLI is the preferred method
-    def _initialize_console(self, console_id: int, timeout: int = 120):
+    def _activate_console_via_web(self, console_id: int) -> bool:
         """
-        DEPRECATED: Use PAW_CLI environment variable instead
+        Activate console by making HTTP request to console web page
+        This simulates visiting the console in a browser to wake it up
         
-        Initialize console by attempting to start it through API interactions
-        PythonAnywhere requires console to be accessed in browser first, but we can try
-        multiple approaches to wake it up programmatically.
+        Args:
+            console_id: The console ID to activate
+            
+        Returns:
+            bool: True if activation appears successful, False otherwise
         """
-        self.logger.warning("_initialize_console is deprecated - use PAW_CLI instead")
-        self.logger.info(f"Attempting to initialize console {console_id}...")
-        start_time = time.time()
-        
-        # Try different initialization strategies
-        strategies = [
-            ("echo test", "Basic echo command"),
-            ("pwd", "Print working directory"), 
-            ("whoami", "Check user"),
-            ("ls", "List directory"),
-            ("bash --version", "Check bash version")
-        ]
-        
-        for attempt, (cmd, desc) in enumerate(strategies):
-            if time.time() - start_time > timeout:
-                break
-                
-            try:
-                self.logger.info(f"Initialization attempt {attempt + 1}: {desc}")
-                
-                # Send initialization command
-                init_response = self.session.post(
-                    f"{self.api_base}/consoles/{console_id}/send_input/",
-                    json={'input': f'{cmd}\n'}
-                )
-                
-                if init_response.status_code == 200:
-                    self.logger.info(f"Console {console_id} accepted command: {cmd}")
-                    
-                    # Wait for output (increased for slower consoles)
-                    time.sleep(5)
-                    
-                    # Check for output
-                    output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
-                    if output_response.status_code == 200:
-                        output_data = output_response.json()
-                        output_text = output_data.get('output', '')
-                        
-                        if output_text.strip():
-                            self.logger.info(f"Console {console_id} is responding with output: {output_text[:100]}")
-                            return True
-                        else:
-                            self.logger.info(f"Console {console_id} command sent but no output yet...")
-                            
-                elif "Console not yet started" in init_response.text:
-                    self.logger.info(f"Console {console_id} still not started, trying next strategy...")
-                else:
-                    self.logger.warning(f"Unexpected response for console {console_id}: {init_response.status_code} - {init_response.text[:100]}")
-                    
-            except Exception as e:
-                self.logger.info(f"Console {console_id} initialization attempt {attempt + 1} failed: {e}")
+        try:
+            # Determine the correct console URL based on the API endpoint
+            if 'eu.pythonanywhere.com' in self.api_base:
+                console_url = f"https://eu.pythonanywhere.com/user/{self.credentials.username}/consoles/{console_id}/"
+            else:
+                console_url = f"https://www.pythonanywhere.com/user/{self.credentials.username}/consoles/{console_id}/"
             
-            time.sleep(5)  # Wait between attempts
-        
-        # If we get here, the console never responded properly
-        self.logger.warning(f"Console {console_id} initialization attempts exhausted. This may be due to PythonAnywhere requiring browser access to start consoles.")
-        return False
-
-    def _wait_for_console_ready(self, console_id: int, timeout: int = 30):
-        """Wait for console to be ready"""
-        start_time = time.time()
-        
-        self.logger.info(f"Warming up console {console_id}...")
-        
-        while time.time() - start_time < timeout:
-            try:
-                # First, check console status
-                status_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
-                if status_response.status_code == 200:
-                    self.logger.info(f"Console {console_id} status OK")
-                    
-                    # Try to get latest output to fully initialize the console
-                    output_response = self.session.get(f"{self.api_base}/consoles/{console_id}/get_latest_output/")
-                    if output_response.status_code == 200:
-                        self.logger.info(f"Console {console_id} is fully ready")
-                        return
-                    else:
-                        self.logger.info(f"Console {console_id} still warming up... (output endpoint: {output_response.status_code})")
-                        
-                else:
-                    self.logger.info(f"Console {console_id} status not ready: {status_response.status_code}")
-                    
-            except Exception as e:
-                self.logger.info(f"Console {console_id} not ready yet: {e}")
+            self.logger.info(f"Attempting to activate console by visiting: {console_url}")
             
-            time.sleep(3)  # Wait a bit longer between checks
-        
-        raise Exception(f"Console {console_id} readiness timeout after {timeout} seconds")
+            # Create a web session with proper headers to simulate browser visit
+            web_session = requests.Session()
+            web_session.headers.update({
+                'Authorization': f'Token {self.credentials.token}',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Accept-Encoding': 'gzip, deflate',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+            })
+            
+            # Make the request to visit the console page
+            response = web_session.get(console_url, timeout=10)
+            
+            if response.status_code == 200:
+                self.logger.info(f"Successfully visited console page (status: {response.status_code})")
+                
+                # Give the console a moment to initialize
+                time.sleep(3)
+                
+                # Test if console is now responsive by trying to get its status
+                test_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
+                if test_response.status_code == 200:
+                    self.logger.info(f"Console {console_id} is now accessible via API")
+                    return True
+                else:
+                    self.logger.warning(f"Console page visit successful but API still not accessible: {test_response.status_code}")
+                    return False
+                    
+            elif response.status_code == 403:
+                self.logger.warning(f"Access denied to console page (403). Token may lack web access permissions.")
+                return False
+            elif response.status_code == 404:
+                self.logger.warning(f"Console {console_id} not found or not accessible")
+                return False
+            else:
+                self.logger.warning(f"Console page visit failed with status: {response.status_code}")
+                return False
+                
+        except requests.exceptions.Timeout:
+            self.logger.warning(f"Timeout while trying to visit console page")
+            return False
+        except Exception as e:
+            self.logger.warning(f"Failed to activate console via web visit: {e}")
+            return False
     
     def _send_command_to_console(self, console_id: int, command: str) -> Dict[str, Any]:
         """Send command to console and get output"""
@@ -346,20 +291,23 @@ class PythonAnywhereGitPipeline:
         
         if send_response.status_code != 200:
             error_msg = send_response.text
-            # If console still not started, give it one more chance
+            # If console still not started, try activating it via web page visit
             if "Console not yet started" in error_msg:
-                self.logger.warning(f"Console {console_id} not started, reinitializing...")
-                try:
-                    self._initialize_console(console_id, timeout=30)
-                    # Retry once
+                self.logger.warning(f"Console {console_id} not started, attempting web activation...")
+                if self._activate_console_via_web(console_id):
+                    self.logger.info(f"Console {console_id} activated, retrying command...")
+                    # Retry the command once
                     send_response = self.session.post(
                         f"{self.api_base}/consoles/{console_id}/send_input/",
                         json={'input': command + '\n'}
                     )
                     if send_response.status_code != 200:
-                        return {'error': f"Failed to send command after reinit: {send_response.text}"}
-                except Exception as e:
-                    return {'error': f"Console reinitialization failed: {e}"}
+                        return {'error': f"Failed to send command after web activation: {send_response.text}"}
+                else:
+                    return {
+                        'error': f"Console {console_id} not started and web activation failed. "
+                                 f"Please manually open the console in your PythonAnywhere dashboard, then set PAW_CLI={console_id}"
+                    }
             else:
                 return {'error': f"Failed to send command: {error_msg}"}
         
@@ -407,21 +355,6 @@ class PythonAnywhereGitPipeline:
         output_lower = output.lower()
         return any(indicator.lower() in output_lower for indicator in error_indicators)
     
-    # DEPRECATED: Console cleanup no longer needed with PAW_CLI approach
-    # Keep for backward compatibility, but PAW_CLI consoles should stay open
-    def _cleanup_console(self, console_id: int):
-        """
-        DEPRECATED: Use PAW_CLI environment variable instead
-        
-        Clean up console session - not recommended when using PAW_CLI
-        """
-        self.logger.warning("_cleanup_console is deprecated - PAW_CLI consoles should stay open")
-        try:
-            self.session.delete(f"{self.api_base}/consoles/{console_id}/")
-            self.logger.info(f"Cleaned up console session: {console_id}")
-        except Exception as e:
-            self.logger.warning(f"Failed to cleanup console {console_id}: {e}")
-    
     def list_available_consoles(self) -> Dict[str, Any]:
         """
         List all available console sessions for the user
@@ -461,16 +394,46 @@ class PythonAnywhereGitPipeline:
             }
 
 
-def load_credentials_from_yaml(yaml_path: str) -> PAWCredentials:
+def load_credentials(yaml_path: str = None) -> PAWCredentials:
     """
-    Load PythonAnywhere credentials from YAML file
+    Load PythonAnywhere credentials with automatic hierarchy:
+    1. Try environment variables first (for GitHub Actions/CI/CD)
+    2. Fall back to YAML file if explicitly specified
     
     Args:
-        yaml_path: Path to YAML configuration file
+        yaml_path: Path to YAML configuration file (required for local development)
         
     Returns:
         PAWCredentials object
     """
+    import os
+    
+    # Try environment variables first (GitHub Actions will populate these)
+    username = os.getenv('PAW_USERNAME')
+    token = os.getenv('PAW_TOKEN') 
+    host = os.getenv('PAW_HOST')
+    
+    if username and token and host:
+        # Environment variables found - use them (GitHub Actions scenario)
+        console_id = os.getenv('PAW_CLI')
+        if not console_id:
+            print("WARNING: PAW_CLI not set!")
+            print("For reliable deployments, please:")
+            print("1. Run: python test_deployment.py consoles") 
+            print("2. Open a console in PythonAnywhere dashboard")
+            print("3. Set PAW_CLI secret in GitHub repository")
+            print("Deployments may fail without PAW_CLI!")
+            
+        return PAWCredentials(username=username, token=token, host=host)
+    
+    # No environment variables - YAML file must be provided for local development
+    if not yaml_path:
+        raise Exception(
+            "No environment variables found and no YAML file specified.\n"
+            "For GitHub Actions: Set PAW_USERNAME, PAW_TOKEN, PAW_HOST secrets\n"
+            "For local development: Use --config path/to/your/config.yaml"
+        )
+    
     try:
         with open(yaml_path, 'r', encoding='utf-8') as file:
             config = yaml.safe_load(file)
@@ -482,95 +445,17 @@ def load_credentials_from_yaml(yaml_path: str) -> PAWCredentials:
         
         if missing_fields:
             raise ValueError(f"Missing required fields in YAML: {missing_fields}")
-        
+            
         return PAWCredentials(
             username=paw_config['username'],
-            token=paw_config['token'],
+            token=paw_config['token'], 
             host=paw_config['host']
         )
         
+    except FileNotFoundError:
+        raise Exception(f"YAML file '{yaml_path}' not found")
     except Exception as e:
         raise Exception(f"Failed to load credentials from {yaml_path}: {e}")
-
-
-def load_credentials_from_env() -> PAWCredentials:
-    """
-    Load PythonAnywhere credentials from environment variables
-    Recommended for GitHub Actions and CI/CD systems
-    
-    Required environment variables:
-    - PAW_USERNAME: PythonAnywhere username
-    - PAW_TOKEN: PythonAnywhere API token  
-    - PAW_HOST: PythonAnywhere host/domain
-    - PAW_CLI: Console ID of an always-open console (HIGHLY RECOMMENDED)
-    
-    Returns:
-        PAWCredentials object
-    """
-    import os
-    
-    username = os.getenv('PAW_USERNAME')
-    token = os.getenv('PAW_TOKEN')
-    host = os.getenv('PAW_HOST')
-    console_id = os.getenv('PAW_CLI')
-    
-    missing_vars = []
-    if not username:
-        missing_vars.append('PAW_USERNAME')
-    if not token:
-        missing_vars.append('PAW_TOKEN')
-    if not host:
-        missing_vars.append('PAW_HOST')
-    
-    if missing_vars:
-        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-    
-    if not console_id:
-        print("WARNING: PAW_CLI not set!")
-        print("For reliable deployments, please:")
-        print("1. Run: python test_deployment.py consoles")
-        print("2. Open a console in PythonAnywhere dashboard")  
-        print("3. Set: export PAW_CLI=<console_id>")
-        print("Deployments may fail without PAW_CLI!")
-    
-    return PAWCredentials(username=username, token=token, host=host)
-    
-    missing_vars = []
-    if not username:
-        missing_vars.append('PAW_USERNAME')
-    if not token:
-        missing_vars.append('PAW_TOKEN')
-    if not host:
-        missing_vars.append('PAW_HOST')
-    
-    if missing_vars:
-        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-    
-    return PAWCredentials(username=username, token=token, host=host)
-
-
-def load_credentials(yaml_path: str = None, use_env: bool = False) -> PAWCredentials:
-    """
-    Load credentials from either YAML file or environment variables
-    
-    Args:
-        yaml_path: Path to YAML configuration file (optional if use_env=True)
-        use_env: If True, load from environment variables instead of YAML
-        
-    Returns:
-        PAWCredentials object
-    """
-    if use_env:
-        return load_credentials_from_env()
-    elif yaml_path:
-        return load_credentials_from_yaml(yaml_path)
-    else:
-        # Try environment first, then fall back to default config.yaml
-        try:
-            return load_credentials_from_env()
-        except ValueError:
-            return load_credentials_from_yaml('config.yaml')
-
 
 def main():
     """Main function for CLI usage"""
@@ -586,8 +471,8 @@ def main():
     args = parser.parse_args()
     
     try:
-        # Load credentials
-        credentials = load_credentials_from_yaml(args.config)
+        # Load credentials using smart hierarchy
+        credentials = load_credentials(args.config)
         
         # Initialize pipeline
         pipeline = PythonAnywhereGitPipeline(credentials)

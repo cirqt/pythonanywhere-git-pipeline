@@ -6,45 +6,7 @@ Uses GitHub Secrets for secure credential management
 
 import os
 import sys
-from main import PythonAnywhereGitPipeline, PAWCredentials
-
-
-def load_credentials_from_env() -> PAWCredentials:
-    """
-    Load PythonAnywhere credentials from environment variables (GitHub Secrets)
-    
-    Required environment variables:
-    - PAW_USERNAME: PythonAnywhere username
-    - PAW_TOKEN: PythonAnywhere API token
-    - PAW_HOST: PythonAnywhere host/domain
-    
-    Returns:
-        PAWCredentials object
-    """
-    username = os.getenv('PAW_USERNAME')
-    token = os.getenv('PAW_TOKEN')
-    host = os.getenv('PAW_HOST')
-    
-    missing_vars = []
-    if not username:
-        missing_vars.append('PAW_USERNAME')
-    if not token:
-        missing_vars.append('PAW_TOKEN')
-    if not host:
-        missing_vars.append('PAW_HOST')
-    
-    if missing_vars:
-        print(f"Missing required environment variables: {', '.join(missing_vars)}")
-        print("Please set these GitHub Secrets in your repository:")
-        print("   - PAW_USERNAME: Your PythonAnywhere username")
-        print("   - PAW_TOKEN: Your PythonAnywhere API token")
-        print("   - PAW_HOST: Your domain (e.g., username.pythonanywhere.com)")
-        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
-    
-    print(f"Loaded credentials for user: {username}")
-    print(f"Using domain: {host}")
-    
-    return PAWCredentials(username=username, token=token, host=host)
+from main import PythonAnywhereGitPipeline, PAWCredentials, load_credentials
 
 
 def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
@@ -59,8 +21,8 @@ def deploy_to_pythonanywhere(project_path: str, branch: str = "main") -> bool:
         True if deployment successful, False otherwise
     """
     try:
-        # Load credentials from environment (GitHub Secrets)
-        credentials = load_credentials_from_env()
+        # Load credentials using smart hierarchy (GitHub Secrets → env vars automatically)
+        credentials = load_credentials()
         
         # Initialize pipeline
         pipeline = PythonAnywhereGitPipeline(credentials)
