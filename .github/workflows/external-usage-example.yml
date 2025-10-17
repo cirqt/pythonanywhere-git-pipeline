@@ -1,6 +1,7 @@
 # Copy this to your repository at: .github/workflows/deploy.yml
 # Required GitHub Secrets: PAW_USERNAME, PAW_TOKEN, PAW_HOST, PAW_CLI, PAW_PROJECT_PATH
 # Optional for private repos: GIT_USERNAME, GIT_TOKEN
+# Optional for console activation: PAW_PASSWORD (your PythonAnywhere web login password)
 
 name: Deploy to PythonAnywhere
 
@@ -31,6 +32,7 @@ jobs:
         PAW_HOST: ${{ secrets.PAW_HOST }}
         PAW_CLI: ${{ secrets.PAW_CLI }}
         PAW_PROJECT_PATH: ${{ secrets.PAW_PROJECT_PATH }}
+        PAW_PASSWORD: ${{ secrets.PAW_PASSWORD }}
         GIT_USERNAME: ${{ secrets.GIT_USERNAME }}
         GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
       run: python github_deploy.py --project-path "$PAW_PROJECT_PATH" --branch main

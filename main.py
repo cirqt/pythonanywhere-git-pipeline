@@ -32,6 +32,7 @@ class PAWCredentials:
     username: str
     token: str
     host: str
+    password: Optional[str] = None  # Optional web password for console activation
     
     def __post_init__(self):
         if not self.host.startswith('http'):
@@ -209,8 +210,8 @@ class PythonAnywhereGitPipeline:
     
     def _activate_console_via_web(self, console_id: int) -> bool:
         """
-        Activate console by making HTTP request to console web page
-        This simulates visiting the console in a browser to wake it up
+        Activate console by authenticating with web interface and visiting console page
+        This requires username/password authentication to create a session, then visits the console
         
         Args:
             console_id: The console ID to activate
@@ -219,18 +220,24 @@ class PythonAnywhereGitPipeline:
             bool: True if activation appears successful, False otherwise
         """
         try:
-            # Determine the correct console URL based on the API endpoint
+            # Check if we have web credentials
+            if not self.credentials.password:
+                self.logger.warning("No web password provided - cannot authenticate with web interface")
+                self.logger.info("Testing if console is already accessible via API...")
+                test_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
+                return test_response.status_code == 200
+            
+            # Determine the correct base URL
             if 'eu.pythonanywhere.com' in self.api_base:
-                console_url = f"https://eu.pythonanywhere.com/user/{self.credentials.username}/consoles/{console_id}/"
+                base_url = "https://eu.pythonanywhere.com"
             else:
-                console_url = f"https://www.pythonanywhere.com/user/{self.credentials.username}/consoles/{console_id}/"
+                base_url = "https://www.pythonanywhere.com"
             
-            self.logger.info(f"Attempting to activate console by visiting: {console_url}")
+            self.logger.info(f"Attempting web authentication for console activation...")
             
-            # Create a web session with proper headers to simulate browser visit
+            # Create a web session to maintain cookies
             web_session = requests.Session()
             web_session.headers.update({
-                'Authorization': f'Token {self.credentials.token}',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.5',
@@ -239,16 +246,63 @@ class PythonAnywhereGitPipeline:
                 'Upgrade-Insecure-Requests': '1',
             })
             
-            # Make the request to visit the console page
-            response = web_session.get(console_url, timeout=10)
+            # Step 1: Get login page to retrieve CSRF token
+            login_url = f"{base_url}/login/"
+            self.logger.info(f"Getting login page: {login_url}")
+            login_page = web_session.get(login_url, timeout=10)
             
-            if response.status_code == 200:
-                self.logger.info(f"Successfully visited console page (status: {response.status_code})")
+            if login_page.status_code != 200:
+                self.logger.warning(f"Failed to get login page (status: {login_page.status_code})")
+                return False
+            
+            # Extract CSRF token from login page
+            import re
+            csrf_match = re.search(r'name=["\']csrfmiddlewaretoken["\'] value=["\']([^"\']+)["\']', login_page.text)
+            if not csrf_match:
+                self.logger.warning("Could not find CSRF token in login page")
+                return False
+            
+            csrf_token = csrf_match.group(1)
+            self.logger.info("Successfully extracted CSRF token")
+            
+            # Step 2: Perform login
+            login_data = {
+                'csrfmiddlewaretoken': csrf_token,
+                'auth-username': self.credentials.username,
+                'auth-password': self.credentials.password,
+                'view-login': 'Log in',
+            }
+            
+            web_session.headers.update({
+                'Referer': login_url,
+                'Content-Type': 'application/x-www-form-urlencoded',
+            })
+            
+            self.logger.info("Attempting to log in...")
+            login_response = web_session.post(login_url, data=login_data, timeout=10)
+            
+            # Check if login was successful (should redirect or show dashboard)
+            if login_response.status_code == 200 and 'login' in login_response.url.lower():
+                self.logger.warning("Login appears to have failed - still on login page")
+                return False
+            
+            self.logger.info(f"Login response status: {login_response.status_code}")
+            self.logger.info("Login appears successful, visiting console page...")
+            
+            # Step 3: Visit console page to activate it
+            console_url = f"{base_url}/user/{self.credentials.username}/consoles/{console_id}/"
+            self.logger.info(f"Visiting console page: {console_url}")
+            
+            console_response = web_session.get(console_url, timeout=10)
+            
+            if console_response.status_code == 200:
+                self.logger.info("Successfully visited console page")
                 
                 # Give the console a moment to initialize
-                time.sleep(60)
+                self.logger.info("Waiting 15 seconds for console to initialize...")
+                time.sleep(15)
                 
-                # Test if console is now responsive by trying to get its status
+                # Test if console is now responsive via API
                 test_response = self.session.get(f"{self.api_base}/consoles/{console_id}/")
                 if test_response.status_code == 200:
                     self.logger.info(f"Console {console_id} is now accessible via API")
@@ -256,22 +310,15 @@ class PythonAnywhereGitPipeline:
                 else:
                     self.logger.warning(f"Console page visit successful but API still not accessible: {test_response.status_code}")
                     return False
-                    
-            elif response.status_code == 403:
-                self.logger.warning(f"Access denied to console page (403). Token may lack web access permissions.")
-                return False
-            elif response.status_code == 404:
-                self.logger.warning(f"Console {console_id} not found or not accessible")
-                return False
             else:
-                self.logger.warning(f"Console page visit failed with status: {response.status_code}")
+                self.logger.warning(f"Failed to visit console page (status: {console_response.status_code})")
                 return False
                 
         except requests.exceptions.Timeout:
-            self.logger.warning(f"Timeout while trying to visit console page")
+            self.logger.warning("Timeout during web authentication")
             return False
         except Exception as e:
-            self.logger.warning(f"Failed to activate console via web visit: {e}")
+            self.logger.warning(f"Failed to activate console via web authentication: {e}")
             return False
     
     def _send_command_to_console(self, console_id: int, command: str) -> Dict[str, Any]:
@@ -354,44 +401,6 @@ class PythonAnywhereGitPipeline:
         
         output_lower = output.lower()
         return any(indicator.lower() in output_lower for indicator in error_indicators)
-    
-    def list_available_consoles(self) -> Dict[str, Any]:
-        """
-        List all available console sessions for the user
-        Useful for finding console IDs to use with PAW_CLI environment variable
-        
-        Returns:
-            Dictionary containing list of console sessions with their IDs and status
-        """
-        try:
-            response = self.session.get(f"{self.api_base}/consoles/")
-            if response.status_code != 200:
-                return {
-                    'success': False,
-                    'error': f"Failed to list consoles: {response.text}"
-                }
-            
-            consoles = response.json()
-            self.logger.info(f"Found {len(consoles)} console sessions:")
-            
-            for console in consoles:
-                console_id = console.get('id', 'Unknown')
-                executable = console.get('executable', 'Unknown')
-                self.logger.info(f"  Console ID: {console_id} (executable: {executable})")
-            
-            return {
-                'success': True,
-                'consoles': consoles,
-                'count': len(consoles)
-            }
-            
-        except Exception as e:
-            error_msg = f"Failed to list consoles: {e}"
-            self.logger.error(error_msg)
-            return {
-                'success': False,
-                'error': error_msg
-            }
 
 
 def load_credentials(yaml_path: str = None) -> PAWCredentials:
@@ -449,7 +458,8 @@ def load_credentials(yaml_path: str = None) -> PAWCredentials:
         return PAWCredentials(
             username=paw_config['username'],
             token=paw_config['token'], 
-            host=paw_config['host']
+            host=paw_config['host'],
+            password=paw_config.get('password')  # Optional web password
         )
         
     except FileNotFoundError:
