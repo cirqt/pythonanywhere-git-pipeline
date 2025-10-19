@@ -433,7 +433,8 @@ def load_credentials(yaml_path: str = None) -> PAWCredentials:
             print("3. Set PAW_CLI secret in GitHub repository")
             print("Deployments may fail without PAW_CLI!")
             
-        return PAWCredentials(username=username, token=token, host=host)
+        password = os.getenv('PAW_PASSWORD')
+        return PAWCredentials(username=username, token=token, host=host, password=password)
     
     # No environment variables - YAML file must be provided for local development
     if not yaml_path:
